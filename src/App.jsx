@@ -562,11 +562,32 @@ function DashboardFilterBar({ month, setMonth, local, setLocal, locales, meta, s
 
 function FacturacionDashboard({ data, filters, error }) {
   const summary = data?.resumen || {};
-  const solesDaily = (data?.porDia || []).filter((row) => row.moneda === 'SOLES');
+  const dailyRows = useMemo(() => {
+    const grouped = new Map();
+    (data?.porDia || []).forEach((row) => {
+      grouped.set(row.fecha, (grouped.get(row.fecha) || 0) + Number(row.sin_igv || 0));
+    });
+    return [...grouped.entries()].map(([fecha, sin_igv]) => ({ fecha, sin_igv }));
+  }, [data]);
   const currencies = data?.porMoneda || [];
   const dollars = currencies.find((row) => row.moneda === 'DOLARES') || {};
-  const localRows = (data?.porLocal || []).filter((row) => row.moneda === 'SOLES');
-  const advisorRows = (data?.porAsesor || []).filter((row) => row.moneda === 'SOLES').slice(0, 10);
+  const localRows = useMemo(() => {
+    const grouped = new Map();
+    (data?.porLocal || []).forEach((row) => {
+      grouped.set(row.nombre, (grouped.get(row.nombre) || 0) + Number(row.sin_igv || 0));
+    });
+    return [...grouped.entries()].map(([nombre, sin_igv]) => ({ nombre, sin_igv }));
+  }, [data]);
+  const advisorRows = useMemo(() => {
+    const grouped = new Map();
+    (data?.porAsesor || []).forEach((row) => {
+      const key = `${row.local_nombre}|${row.asesor}`;
+      const current = grouped.get(key) || { asesor: row.asesor, local_nombre: row.local_nombre, sin_igv: 0 };
+      current.sin_igv += Number(row.sin_igv || 0);
+      grouped.set(key, current);
+    });
+    return [...grouped.values()].sort((a, b) => b.sin_igv - a.sin_igv).slice(0, 10);
+  }, [data]);
   const detailedLocalRows = data?.porLocal || [];
   const totalsByMoneda = (moneda) =>
     detailedLocalRows
@@ -614,7 +635,7 @@ function FacturacionDashboard({ data, filters, error }) {
   const dailyOption = {
     tooltip: { trigger: 'axis', valueFormatter: (value) => money(value) },
     grid: { left: 55, right: 20, top: 25, bottom: 30 },
-    xAxis: { type: 'category', data: solesDaily.map((row) => shortDate(row.fecha)) },
+    xAxis: { type: 'category', data: dailyRows.map((row) => shortDate(row.fecha)) },
     yAxis: { type: 'value', axisLabel: { formatter: (value) => `${Math.round(value / 1000)}k` } },
     series: [{
       name: 'Venta',
@@ -623,7 +644,7 @@ function FacturacionDashboard({ data, filters, error }) {
       areaStyle: { opacity: 0.12 },
       lineStyle: { width: 3 },
       itemStyle: { color: '#0f9f6e' },
-      data: solesDaily.map((row) => Number(row.sin_igv || 0)),
+      data: dailyRows.map((row) => Number(row.sin_igv || 0)),
     }],
   };
 
@@ -672,7 +693,7 @@ function FacturacionDashboard({ data, filters, error }) {
             key={row.local}
             label={row.local}
             value={money(row.totalMixto)}
-            hint={`${money(row.soles)} + ${moneyByCurrency(row.dolares, 'DOLARES')} sin conversion`}
+            hint="Incluye documentos en dólares convertidos a soles"
             icon={Banknote}
             tone="amber"
           />
@@ -680,11 +701,18 @@ function FacturacionDashboard({ data, filters, error }) {
         <Card
           label="Total general"
           value={money(mixedGrandTotal.totalMixto)}
-          hint={`${money(mixedGrandTotal.soles)} + ${moneyByCurrency(mixedGrandTotal.dolares, 'DOLARES')} sin conversion`}
+          hint="Equivalente en soles · No incluye Mostrador"
           icon={TrendingUp}
           tone="green"
         />
-        <Card label="Facturacion dolares" value={moneyByCurrency(dollars.sin_igv, 'DOLARES')} hint="Separada de soles" icon={Banknote} tone="violet" />
+        <Card
+          label="Venta de repuestos / Mostrador"
+          value={money(data?.mostrador?.sin_igv)}
+          hint={`${number.format(data?.mostrador?.comprobantes || 0)} comprobante(s) · No suma al total`}
+          icon={ReceiptText}
+          tone="amber"
+        />
+        <Card label="Documentos en dolares" value={moneyByCurrency(dollars.moneda_usd, 'DOLARES')} hint="Importe original informativo" icon={Banknote} tone="violet" />
         <Card label="Meta mensual" value={money(summary.meta)} hint={`${pct(summary.avanceMeta)} de avance`} icon={Goal} tone="blue" />
         <Card label="Proyección" value={money(summary.proyeccionSoles)} hint={`${summary.diasTranscurridos || 0} de ${summary.diasMes || 0} días`} icon={TrendingUp} tone="green" />
         <Card label="Brecha" value={money(summary.brecha)} hint={summary.brecha >= 0 ? 'Meta superada' : 'Falta para la meta'} icon={CalendarDays} tone={summary.brecha >= 0 ? 'green' : 'rose'} />
@@ -745,10 +773,10 @@ function FacturacionDashboard({ data, filters, error }) {
                     </td>
                     <td className="px-3 py-2 text-right text-slate-600">{number.format(row.comprobantes || 0)}</td>
                     <td className="px-3 py-2 text-right text-slate-600">{number.format(row.clientes || 0)}</td>
-                    <td className="px-3 py-2 text-right font-semibold text-slate-950">{moneyByCurrency(row.sin_igv, row.moneda)}</td>
-                    <td className="px-3 py-2 text-right text-slate-600">{moneyByCurrency(row.impuesto, row.moneda)}</td>
-                    <td className="px-3 py-2 text-right text-slate-600">{moneyByCurrency(row.con_igv, row.moneda)}</td>
-                    <td className="py-2 pl-3 text-right font-semibold text-slate-950">{moneyByCurrency(row.ticket_promedio, row.moneda)}</td>
+                    <td className="px-3 py-2 text-right font-semibold text-slate-950">{money(row.sin_igv)}</td>
+                    <td className="px-3 py-2 text-right text-slate-600">{money(row.impuesto)}</td>
+                    <td className="px-3 py-2 text-right text-slate-600">{money(row.con_igv)}</td>
+                    <td className="py-2 pl-3 text-right font-semibold text-slate-950">{money(row.ticket_promedio)}</td>
                   </tr>
                 ))}
                 {detailedLocalRows.length === 0 && (
@@ -771,14 +799,14 @@ function FacturacionDashboard({ data, filters, error }) {
                     </td>
                   </tr>
                   <tr className="font-semibold">
-                    <td className="py-2 pr-3 text-slate-950" colSpan={2}>Total Dólares</td>
+                    <td className="py-2 pr-3 text-slate-950" colSpan={2}>Documentos en dólares (equiv. soles)</td>
                     <td className="px-3 py-2 text-right text-slate-950">{number.format(dolaresTotal.comprobantes)}</td>
                     <td className="px-3 py-2 text-right text-slate-950">{number.format(dolaresTotal.clientes)}</td>
-                    <td className="px-3 py-2 text-right text-slate-950">{moneyByCurrency(dolaresTotal.sin_igv, 'DOLARES')}</td>
-                    <td className="px-3 py-2 text-right text-slate-950">{moneyByCurrency(dolaresTotal.impuesto, 'DOLARES')}</td>
-                    <td className="px-3 py-2 text-right text-slate-950">{moneyByCurrency(dolaresTotal.con_igv, 'DOLARES')}</td>
+                    <td className="px-3 py-2 text-right text-slate-950">{money(dolaresTotal.sin_igv)}</td>
+                    <td className="px-3 py-2 text-right text-slate-950">{money(dolaresTotal.impuesto)}</td>
+                    <td className="px-3 py-2 text-right text-slate-950">{money(dolaresTotal.con_igv)}</td>
                     <td className="py-2 pl-3 text-right text-slate-950">
-                      {moneyByCurrency(dolaresTotal.comprobantes ? dolaresTotal.sin_igv / dolaresTotal.comprobantes : 0, 'DOLARES')}
+                      {money(dolaresTotal.comprobantes ? dolaresTotal.sin_igv / dolaresTotal.comprobantes : 0)}
                     </td>
                   </tr>
                 </tfoot>

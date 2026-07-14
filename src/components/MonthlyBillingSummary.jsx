@@ -8,15 +8,7 @@ const pen = new Intl.NumberFormat('es-PE', {
   maximumFractionDigits: 2,
 });
 
-const usd = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-const formatMoney = (value, currency) =>
-  currency === 'DOLARES' ? usd.format(Number(value || 0)) : pen.format(Number(value || 0));
+const formatMoney = (value) => pen.format(Number(value || 0));
 
 function monthDays(month) {
   if (!/^\d{4}-\d{2}$/.test(month || '')) return [];
@@ -42,7 +34,7 @@ function advisorLabel(name) {
   return normalized;
 }
 
-function CurrencyTable({ currency, rows, days }) {
+function MonthlyTable({ rows, days }) {
   const advisors = useMemo(
     () => [...new Set(rows.map((row) => row.asesor || 'Sin asesor'))].sort((a, b) => a.localeCompare(b, 'es')),
     [rows],
@@ -72,11 +64,11 @@ function CurrencyTable({ currency, rows, days }) {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
         <div>
           <h2 className="font-semibold text-slate-950">
-            Avance diario · {currency === 'DOLARES' ? 'Dólares' : 'Soles'}
+            Avance diario · Equivalente en soles
           </h2>
           <p className="text-xs text-slate-500">Importes sin IGV, notas de crédito y anulaciones aplicadas.</p>
         </div>
-        <strong className="text-lg text-slate-950">{formatMoney(grandTotal, currency)}</strong>
+        <strong className="text-lg text-slate-950">{formatMoney(grandTotal)}</strong>
       </div>
 
       <div className="overflow-x-auto">
@@ -115,12 +107,12 @@ function CurrencyTable({ currency, rows, days }) {
                     const value = values.get(`${day.key}|${advisor}`) || 0;
                     return (
                       <td key={advisor} className="border-r border-slate-100 px-3 py-2 text-right tabular-nums text-slate-700">
-                        {value ? formatMoney(value, currency) : '—'}
+                        {value ? formatMoney(value) : '—'}
                       </td>
                     );
                   })}
                   <td className="bg-blue-50/50 px-3 py-2 text-right font-semibold tabular-nums text-blue-900">
-                    {dayTotal ? formatMoney(dayTotal, currency) : '—'}
+                    {dayTotal ? formatMoney(dayTotal) : '—'}
                   </td>
                 </tr>
               );
@@ -131,10 +123,10 @@ function CurrencyTable({ currency, rows, days }) {
               <td className="sticky left-0 z-10 border-r border-slate-700 bg-slate-900 px-3 py-3">TOTAL</td>
               {advisorTotals.map((row) => (
                 <td key={row.advisor} className="border-r border-slate-700 px-3 py-3 text-right tabular-nums">
-                  {formatMoney(row.total, currency)}
+                  {formatMoney(row.total)}
                 </td>
               ))}
-              <td className="px-3 py-3 text-right tabular-nums">{formatMoney(grandTotal, currency)}</td>
+              <td className="px-3 py-3 text-right tabular-nums">{formatMoney(grandTotal)}</td>
             </tr>
           </tfoot>
         </table>
@@ -150,8 +142,8 @@ function CurrencyTable({ currency, rows, days }) {
 export default function MonthlyBillingSummary({ data, filters, error }) {
   const rows = data?.rows || [];
   const days = useMemo(() => monthDays(filters.month), [filters.month]);
-  const solesRows = rows.filter((row) => row.moneda === 'SOLES');
-  const dollarRows = rows.filter((row) => row.moneda === 'DOLARES');
+  const totalPrincipal = rows.reduce((sum, row) => sum + Number(row.sin_igv || 0), 0);
+  const mostrador = Number(data?.mostrador?.sin_igv || 0);
 
   return (
     <div className={`mx-auto max-w-[1680px] px-4 py-5 transition-all duration-200 sm:px-6 lg:px-8 ${
@@ -205,9 +197,23 @@ export default function MonthlyBillingSummary({ data, filters, error }) {
 
       {error && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>}
 
+      <section className="mb-5 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 shadow-sm">
+          <p className="text-sm font-medium text-blue-700">Total principal del avance</p>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-blue-950">{formatMoney(totalPrincipal)}</p>
+          <p className="mt-2 text-xs text-blue-700">No incluye ventas de Mostrador.</p>
+        </div>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
+          <p className="text-sm font-medium text-amber-700">Venta de repuestos / Mostrador</p>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-amber-950">{formatMoney(mostrador)}</p>
+          <p className="mt-2 text-xs text-amber-700">
+            Informativo · {Number(data?.mostrador?.comprobantes || 0)} comprobante(s) · No suma al total.
+          </p>
+        </div>
+      </section>
+
       <div className="space-y-5">
-        <CurrencyTable currency="SOLES" rows={solesRows} days={days} />
-        {dollarRows.length > 0 && <CurrencyTable currency="DOLARES" rows={dollarRows} days={days} />}
+        <MonthlyTable rows={rows} days={days} />
       </div>
     </div>
   );
