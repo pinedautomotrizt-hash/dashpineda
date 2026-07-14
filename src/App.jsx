@@ -23,6 +23,7 @@ import {
   Users,
 } from 'lucide-react';
 import { api } from './api';
+import MonthlyBillingSummary from './components/MonthlyBillingSummary';
 
 const currency = new Intl.NumberFormat('es-PE', {
   style: 'currency',
@@ -255,6 +256,7 @@ function VehicleHero() {
 function Sidebar({ page, setPage, collapsed, setCollapsed }) {
   const items = [
     { id: 'facturacion', label: 'Facturacion', icon: Banknote },
+    { id: 'resumen-mensual', label: 'Resumen mensual', icon: CalendarDays },
     { id: 'dashboard', label: 'Operativo', icon: LayoutDashboard },
     { id: 'asesores', label: 'Por Asesor', icon: Users },
     { id: 'comercial', label: 'Informe Comercial', icon: Briefcase },
@@ -2020,6 +2022,8 @@ function App() {
         </div>
       ) : page === 'facturacion' ? (
         <FacturacionDashboard data={financial} filters={dashboardFilters} error={error} />
+      ) : page === 'resumen-mensual' ? (
+        <MonthlyBillingSummary data={advisorData} filters={dashboardFilters} error={error} />
       ) : page === 'asesores' ? (
         <AsesoresDashboard
           data={advisorData}
