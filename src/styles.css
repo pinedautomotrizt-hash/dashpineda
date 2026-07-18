@@ -11,3 +11,48 @@ body {
 * {
   box-sizing: border-box;
 }
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  @page { size: landscape; margin: 10mm; }
+  body * { visibility: hidden; }
+  .monthly-report-root, .monthly-report-root * { visibility: visible; }
+  .monthly-report-root {
+    position: absolute;
+    inset: 0;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .monthly-report-root .no-print { display: none !important; }
+  .monthly-report-root .print-only { display: flex !important; }
+  .corporate-print-header {
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid #b91c1c;
+  }
+  .corporate-print-header img {
+    width: 92px;
+    height: 56px;
+    object-fit: contain;
+  }
+  .corporate-print-header h1 {
+    margin: 0 0 4px;
+    color: #991b1b;
+    font-size: 20px;
+    font-weight: 800;
+  }
+  .corporate-print-header p {
+    margin: 0;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .monthly-report-root table { width: 100%; font-size: 9px; }
+  .monthly-report-root section { break-inside: avoid; box-shadow: none !important; }
+}
