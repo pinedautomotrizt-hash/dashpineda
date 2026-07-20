@@ -86,13 +86,20 @@ function VehicleHero() {
         });
 
         const box = new THREE.Box3().setFromObject(model);
-        const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
         const maxSize = Math.max(size.x, size.y, size.z) || 1;
         const scale = 3.9 / maxSize;
 
-        model.position.sub(center);
+        // El centrado tiene que calcularse DESPUES de escalar: position no se
+        // reescala junto con el modelo, así que centrar con el tamaño original
+        // deja el offset sin ajustar y el modelo queda descuadrado. Y hay que
+        // forzar updateMatrixWorld: Box3.setFromObject usa la matriz actual,
+        // que no se recalcula sola hasta el siguiente render.
         model.scale.setScalar(scale);
+        model.updateMatrixWorld(true);
+        const scaledBox = new THREE.Box3().setFromObject(model);
+        const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
+        model.position.sub(scaledCenter);
         model.rotation.set(0, -0.55, 0);
         scene.add(model);
         setLoading(false);
@@ -346,8 +353,6 @@ export default function DashboardPage({ routePage = 'dashboard' }) {
 
   const topClients = series?.topClientes || [];
   const maxClient = Math.max(...topClients.map((row) => Number(row.total)), 1);
-  const paymentRows = series?.porFormaPago || [];
-  const registrarRows = series?.porRegistrador || [];
   const pendingOtRows = (series?.otPorEstado || []).filter((row) => row.nombre !== 'FACTURADO');
   const pendingPotential = pendingOtRows.reduce((sum, row) => sum + Number(row.venta || 0), 0);
   const pendingOts = pendingOtRows.reduce((sum, row) => sum + Number(row.ots || 0), 0);
@@ -966,7 +971,7 @@ export default function DashboardPage({ routePage = 'dashboard' }) {
           </Panel>
         </section>
 
-        <section className="mb-4 grid gap-4 xl:grid-cols-[1fr_.85fr_.85fr]">
+        <section className="mb-4 grid gap-4">
           <Panel title="Top Clientes">
             <div className="space-y-3">
               {topClients.map((row) => (
@@ -978,28 +983,6 @@ export default function DashboardPage({ routePage = 'dashboard' }) {
                   <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                     <div className="h-full rounded-full bg-blue-700" style={{ width: `${(Number(row.total) / maxClient) * 100}%` }} />
                   </div>
-                </div>
-              ))}
-            </div>
-          </Panel>
-
-          <Panel title="Forma de Pago">
-            <div className="divide-y divide-slate-100">
-              {paymentRows.map((row) => (
-                <div key={row.nombre} className="flex items-center justify-between gap-3 py-2 text-sm">
-                  <span className="font-medium text-slate-700">{row.nombre}</span>
-                  <span className="text-right font-semibold text-slate-950">{money(row.total)}</span>
-                </div>
-              ))}
-            </div>
-          </Panel>
-
-          <Panel title="Registrado Por">
-            <div className="divide-y divide-slate-100">
-              {registrarRows.map((row) => (
-                <div key={row.nombre} className="flex items-center justify-between gap-3 py-2 text-sm">
-                  <span className="truncate font-medium text-slate-700" title={row.nombre}>{row.nombre || 'Sin usuario'}</span>
-                  <span className="text-right font-semibold text-slate-950">{money(row.total)}</span>
                 </div>
               ))}
             </div>
