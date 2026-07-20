@@ -45,6 +45,23 @@ export function Panel({ title, children, right }) {
 
 
 
+//Overlay de carga: se pone encima del contenido mientras se trae data nueva
+//(cambio de filtros, refresh manual) para que no se vean ceros de golpe.
+export function LoadingOverlay({ show, label = 'Cargando datos...' }) {
+  if (!show) return null;
+  return (
+    <div className="absolute inset-0 z-20 grid place-items-center rounded-xl bg-white/70 backdrop-blur-[1px]">
+      <div className="flex flex-col items-center gap-3 rounded-lg bg-white px-6 py-4 shadow-md">
+        <div className="h-9 w-9 animate-spin rounded-full border-4 border-slate-200 border-t-red-700" />
+        <p className="text-sm font-semibold text-slate-600">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+
+
+
 //Varicion de Colores Gerson -----------
 export function VariationBadge({ value }) {
   if (value === null || value === undefined || Number.isNaN(value)) {

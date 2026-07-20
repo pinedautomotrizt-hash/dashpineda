@@ -13,7 +13,7 @@ export default function DashboardFilterBar({ month, setMonth, local, setLocal, l
             className="mt-1 h-10 w-full rounded-md border border-slate-200 px-3 text-sm text-slate-950"
             type="month"
             value={month}
-            onChange={(event) => setMonth(event.target.value)}
+            onChange={(event) => setMonth(event.target.value)} 
           />
         </label>
         <label className="text-xs font-medium text-slate-500">

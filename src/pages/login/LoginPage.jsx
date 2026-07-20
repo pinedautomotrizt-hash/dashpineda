@@ -47,13 +47,13 @@ export default function LoginPage() {
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <label className="block text-sm font-medium text-slate-700">
-            Email
             <div className="mt-1 flex items-center rounded-md border border-slate-200 px-3">
               <Mail size={16} className="text-slate-400" />
               <input
                 type="email"
                 required
                 autoComplete="username"
+                placeholder='Email'
                 className="h-11 w-full border-0 bg-transparent px-2 text-sm text-slate-950 outline-none"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
@@ -62,13 +62,13 @@ export default function LoginPage() {
           </label>
 
           <label className="block text-sm font-medium text-slate-700">
-            Contraseña
             <div className="mt-1 flex items-center rounded-md border border-slate-200 px-3">
               <Lock size={16} className="text-slate-400" />
               <input
                 type="password"
                 required
                 autoComplete="current-password"
+                placeholder='Contraseña'
                 className="h-11 w-full border-0 bg-transparent px-2 text-sm text-slate-950 outline-none"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}

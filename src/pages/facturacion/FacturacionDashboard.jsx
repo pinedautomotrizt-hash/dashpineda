@@ -9,7 +9,7 @@ import {
   ReceiptText,
   TrendingUp,
 } from 'lucide-react';
-import { Card, Panel } from '../../components/dashboard/DashboardPrimitives';
+import { Card, Panel, LoadingOverlay } from '../../components/dashboard/DashboardPrimitives';
 import { money, moneyByCurrency, number, pct, shortDate } from '../../utils/formatters';
 import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
 
@@ -286,6 +286,8 @@ export default function FacturacionDashboard({ data, filters, error }) {
         </div>
       </header>
       {error && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>}
+      <div className="relative">
+      <LoadingOverlay show={filters.loading} />
       <section className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {mixedTotalsByLocal.map((row) => (
           <Card
@@ -385,6 +387,7 @@ export default function FacturacionDashboard({ data, filters, error }) {
           </div>
         </Panel>
       </section>
+      </div>
     </div>
   );
 }

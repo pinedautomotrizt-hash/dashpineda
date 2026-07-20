@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileUp, RefreshCw } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { api } from '../../api';
 import { Panel } from '../../components/dashboard/DashboardPrimitives';
 import { number } from '../../utils/formatters';
@@ -7,18 +8,16 @@ import { number } from '../../utils/formatters';
 export default function ImportacionesContent() {
   const [importType, setImportType] = useState('registro_venta');
   const [file, setFile] = useState(null);
-  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const isDetalleOt = importType === 'detalle_factura_ot';
 
   async function submit(event) {
     event.preventDefault();
     if (!file) {
-      setMessage('Selecciona un archivo Excel o CSV.');
+      Swal.fire({ icon: 'warning', title: 'Falta el archivo', text: 'Selecciona un archivo CSV para importar.' });
       return;
     }
     setLoading(true);
-    setMessage('');
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -31,11 +30,19 @@ export default function ImportacionesContent() {
       const source = response.data.local
         ? ` Sede: ${response.data.local}. Periodo: ${response.data.desde} al ${response.data.hasta}.`
         : '';
-      setMessage(`${response.data.message}${source} Filas importadas: ${number.format(response.data.filas_importadas)}.`);
+      Swal.fire({
+        icon: 'success',
+        title: 'Importación completada',
+        text: `${response.data.message}${source} Filas importadas: ${number.format(response.data.filas_importadas)}.`,
+      });
       setFile(null);
       event.target.reset();
     } catch (error) {
-      setMessage(error.response?.data?.message || error.message || 'No se pudo importar el archivo.');
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo importar',
+        text: error.response?.data?.message || error.message || 'No se pudo importar el archivo.',
+      });
     } finally {
       setLoading(false);
     }
@@ -69,7 +76,6 @@ export default function ImportacionesContent() {
                 onChange={(event) => {
                   setImportType(event.target.value);
                   setFile(null);
-                  setMessage('');
                 }}
               >
                 <option value="registro_venta">Registro de Venta por Local</option>
@@ -98,7 +104,7 @@ export default function ImportacionesContent() {
 
             <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
               {isDetalleOt
-                ? 'Usa el reporte “Detalle de Facturas de OT por Local”, en Excel o CSV. Puedes cargar Callao y Trujillo por separado; el sistema conserva ambas sedes.'
+                ? 'Usa el reporte “Detalle de Facturas de OT por Local”, en CSV. Puedes cargar Callao y Trujillo por separado; el sistema conserva ambas sedes.'
                 : 'Puedes usar el CSV con separador punto y coma. En ambos se ignoran las primeras 5 filas y se aplican las mismas reglas contra duplicados.'}
             </div>
 
@@ -110,10 +116,6 @@ export default function ImportacionesContent() {
               {loading ? 'Importando...' : 'Importar CSV'}
             </button>
           </form>
-
-          {message && (
-            <div className="mt-4 rounded-md border border-blue-100 bg-blue-50 p-3 text-sm text-blue-800">{message}</div>
-          )}
         </Panel>
       </section>
     </div>

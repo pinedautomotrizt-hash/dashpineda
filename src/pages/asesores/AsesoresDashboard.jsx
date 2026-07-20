@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import ReactECharts from "echarts-for-react";
 import { Users } from "lucide-react";
 import DashboardFilterBar from "../../components/dashboard/DashboardFilterBar";
-import { Panel } from "../../components/dashboard/DashboardPrimitives";
+import { Panel, LoadingOverlay } from "../../components/dashboard/DashboardPrimitives";
 import { money, moneyByCurrency, number, pct, shortDate } from "../../utils/formatters";
 
 
@@ -234,7 +234,8 @@ export default function AsesoresDashboard({ data, filters, error }) {
           {error}
         </div>
       )}
-      <div className="space-y-4">
+      <div className="relative space-y-4">
+        <LoadingOverlay show={filters.loading} />
         <section>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
             <h2 className="text-lg font-semibold text-slate-950">

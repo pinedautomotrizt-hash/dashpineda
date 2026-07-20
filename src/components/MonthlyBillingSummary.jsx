@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { CalendarDays, Download, RefreshCw } from 'lucide-react';
 import { buildMonthlySummaryModel, downloadMonthlySummaryPdf } from '../utils/monthlySummaryPdf';
 import { COMPANY } from '../config/appConfig';
+import { LoadingOverlay } from './dashboard/DashboardPrimitives';
 
 const pen = new Intl.NumberFormat('es-PE', {
   style: 'currency',
@@ -202,6 +203,8 @@ export default function MonthlyBillingSummary({ data, filters, error, advisorCon
 
       {error && <div className="no-print mb-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>}
 
+      <div className="relative">
+      <LoadingOverlay show={filters.loading} />
       <section className="no-print mb-5 grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 shadow-sm">
           <p className="text-sm font-medium text-blue-700">Total principal del avance</p>
@@ -232,6 +235,7 @@ export default function MonthlyBillingSummary({ data, filters, error, advisorCon
 
       <div className="space-y-5">
         <MonthlyTable rows={rows} days={days} model={reportModel} />
+      </div>
       </div>
     </div>
   );

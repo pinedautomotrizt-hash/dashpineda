@@ -7,7 +7,7 @@ import { Banknote, CalendarDays, Car, Gauge, Goal, ReceiptText, RefreshCw, Trend
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api';
 import ModuleSidebar from '../../components/layout/ModuleSidebar';
-import { Card, Panel } from '../../components/dashboard/DashboardPrimitives';
+import { Card, Panel, LoadingOverlay } from '../../components/dashboard/DashboardPrimitives';
 import { currentMonth, money, moneyByCurrency, number, pct, shortDate } from '../../utils/formatters';
 import { APP_DEFAULTS, APP_PATHS, monthlyGoalForLocal } from '../../config/appConfig';
 import peruGeoJsonText from '../../assets/maps/peru-departamentos.geojson?raw';
@@ -588,6 +588,8 @@ export default function DashboardPage({ routePage = 'dashboard' }) {
           <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>
         )}
 
+        <div className="relative">
+        <LoadingOverlay show={loading} />
         <section className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <Card
             label="Monto oficial"
@@ -1043,6 +1045,7 @@ export default function DashboardPage({ routePage = 'dashboard' }) {
             </div>
           </Panel>
         </section>
+        </div>
       </div>
       )}
     </main>
