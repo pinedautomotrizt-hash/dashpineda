@@ -1,15 +1,38 @@
-import React, { useState } from 'react';
-import { FileUp, RefreshCw } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { FileUp, History, RefreshCw } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { api } from '../../api';
 import { Panel } from '../../components/dashboard/DashboardPrimitives';
 import { number } from '../../utils/formatters';
 
+const fechaHora = new Intl.DateTimeFormat('es-PE', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+});
+
 export default function ImportacionesContent() {
   const [importType, setImportType] = useState('registro_venta');
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [historial, setHistorial] = useState([]);
+  const [loadingHistorial, setLoadingHistorial] = useState(true);
   const isDetalleOt = importType === 'detalle_factura_ot';
+
+  async function cargarHistorial() {
+    setLoadingHistorial(true);
+    try {
+      const response = await api.get('/import/historial');
+      setHistorial(response.data.historial || []);
+    } catch {
+      // El historial es informativo; si falla no bloquea el formulario de importación.
+    } finally {
+      setLoadingHistorial(false);
+    }
+  }
+
+  useEffect(() => {
+    cargarHistorial();
+  }, []);
 
   async function submit(event) {
     event.preventDefault();
@@ -37,6 +60,7 @@ export default function ImportacionesContent() {
       });
       setFile(null);
       event.target.reset();
+      cargarHistorial();
     } catch (error) {
       Swal.fire({
         icon: 'error',
@@ -65,7 +89,7 @@ export default function ImportacionesContent() {
         </div>
       </header>
 
-      <section className="mx-auto max-w-2xl px-4 py-5 sm:px-6 lg:px-8">
+      <section className="mx-auto grid max-w-6xl gap-5 px-4 py-5 sm:px-6 lg:px-8 xl:grid-cols-[420px_1fr] xl:items-start">
         <Panel title="Importar facturación de servicios">
           <form className="space-y-5" onSubmit={submit}>
             <label className="block text-sm font-semibold text-slate-700">
@@ -116,6 +140,51 @@ export default function ImportacionesContent() {
               {loading ? 'Importando...' : 'Importar CSV'}
             </button>
           </form>
+        </Panel>
+
+        <Panel
+          title="Historial de importaciones"
+          right={<span className="text-xs text-slate-500">Últimas 50</span>}
+        >
+          {loadingHistorial ? (
+            <div className="grid h-24 place-items-center text-sm text-slate-500">
+              <RefreshCw size={18} className="animate-spin" />
+            </div>
+          ) : historial.length === 0 ? (
+            <div className="grid h-24 place-items-center gap-2 text-center text-sm text-slate-500">
+              <History className="mx-auto text-slate-400" size={22} />
+              Todavía no hay importaciones registradas.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 text-xs text-slate-500">
+                    <th className="py-2 pr-3 font-semibold">Reporte</th>
+                    <th className="px-3 py-2 text-right font-semibold">Filas</th>
+                    <th className="px-3 py-2 font-semibold">Sede(s)</th>
+                    <th className="px-3 py-2 font-semibold">Periodo</th>
+                    <th className="py-2 pl-3 text-right font-semibold">Fecha</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historial.map((item) => (
+                    <tr key={item.id} className="border-b border-slate-100">
+                      <td className="py-2 pr-3 font-medium text-slate-900">{item.reporte}</td>
+                      <td className="px-3 py-2 text-right text-slate-600">{number.format(item.filas_importadas)}</td>
+                      <td className="px-3 py-2 text-slate-600">{item.locales || '—'}</td>
+                      <td className="px-3 py-2 text-slate-600">
+                        {item.periodo_desde ? `${item.periodo_desde} al ${item.periodo_hasta}` : '—'}
+                      </td>
+                      <td className="py-2 pl-3 text-right text-xs text-slate-500">
+                        {fechaHora.format(new Date(item.creado_en))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Panel>
       </section>
     </div>
