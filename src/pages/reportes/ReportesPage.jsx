@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { ArrowLeft, FileSpreadsheet } from 'lucide-react';
 import FacturacionReportForm from '../../components/reportes/FacturacionReportForm';
 import ModuleSidebar from '../../components/layout/ModuleSidebar';
+
+
 // Página independiente para exportaciones; no carga consultas ni gráficos del dashboard.
 export default function ReportesPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

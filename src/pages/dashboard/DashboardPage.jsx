@@ -90,6 +90,11 @@ function VehicleHero() {
         const maxSize = Math.max(size.x, size.y, size.z) || 1;
         const scale = 3.9 / maxSize;
 
+
+
+
+
+
         // El centrado tiene que calcularse DESPUES de escalar: position no se
         // reescala junto con el modelo, así que centrar con el tamaño original
         // deja el offset sin ajustar y el modelo queda descuadrado. Y hay que
@@ -133,6 +138,7 @@ function VehicleHero() {
     };
   }, []);
 
+  
   return (
     <div className="relative h-64 w-full overflow-hidden rounded-lg bg-slate-50">
       <div ref={mountRef} className="h-full w-full" />
@@ -144,6 +150,7 @@ function VehicleHero() {
     </div>
   );
 }
+
 
 export default function DashboardPage({ routePage = 'dashboard' }) {
   const navigate = useNavigate();
