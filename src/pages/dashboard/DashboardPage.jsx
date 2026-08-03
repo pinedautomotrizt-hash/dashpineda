@@ -3,7 +3,7 @@ import ReactECharts from 'echarts-for-react';
 import * as echarts from 'echarts';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { Banknote, CalendarDays, Car, Gauge, Goal, ReceiptText, RefreshCw, TrendingUp } from 'lucide-react';
+import { Banknote, Box, CalendarDays, Car, Gauge, Goal, ReceiptText, RefreshCw, TrendingUp, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api';
 import ModuleSidebar from '../../components/layout/ModuleSidebar';
@@ -31,13 +31,25 @@ function Sidebar({ collapsed, setCollapsed }) {
   return <ModuleSidebar activePath={APP_PATHS.dashboard} collapsed={collapsed} onCollapsedChange={setCollapsed} />;
 }
 
-function VehicleHero() {
+// Mapa marca/modelo -> archivo .glb disponible. Solo las combinaciones listadas
+// aca muestran el boton de "ver en 3D" en el ranking de modelos atendidos.
+const MODEL_3D_ASSETS = {
+  'FORD|RANGER': '/assets/ford_ranger_2023.glb',
+};
+
+function modelo3dPara(marca, modelo) {
+  const clave = `${String(marca || '').trim().toUpperCase()}|${String(modelo || '').trim().toUpperCase()}`;
+  return MODEL_3D_ASSETS[clave] || null;
+}
+
+function Vehicle3DViewer({ modelUrl, heightClass = 'h-64', loadingLabel = 'Cargando modelo 3D...' }) {
   const mountRef = useRef(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return undefined;
+    setLoading(true);
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#f8fafc');
@@ -75,7 +87,7 @@ function VehicleHero() {
     let model = null;
     const loader = new GLTFLoader();
     loader.load(
-      '/assets/chevrolet_camioneta_2003.glb',
+      modelUrl,
       (gltf) => {
         model = gltf.scene;
         model.traverse((child) => {
@@ -136,17 +148,79 @@ function VehicleHero() {
       renderer.dispose();
       mount.removeChild(renderer.domElement);
     };
-  }, []);
+  }, [modelUrl]);
 
-  
   return (
-    <div className="relative h-64 w-full overflow-hidden rounded-lg bg-slate-50">
+    <div className={`relative ${heightClass} w-full overflow-hidden rounded-lg bg-slate-50`}>
       <div ref={mountRef} className="h-full w-full" />
       {loading && (
         <div className="absolute inset-0 grid place-items-center bg-slate-50 text-sm font-medium text-slate-500">
-          Cargando camioneta 3D...
+          {loadingLabel}
         </div>
       )}
+    </div>
+  );
+}
+
+function VehicleHero() {
+  return (
+    <Vehicle3DViewer
+      modelUrl="/assets/chevrolet_camioneta_2003.glb"
+      heightClass="h-64"
+      loadingLabel="Cargando camioneta 3D..."
+    />
+  );
+}
+
+// Modal simple con el visor 3D + los datos del modelo, para el ranking de modelos atendidos.
+function Modelo3DModal({ modelo, onClose }) {
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-xl bg-white p-5 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{modelo.marca}</p>
+            <h3 className="text-xl font-bold text-slate-950">{modelo.modelo}</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Cerrar"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <Vehicle3DViewer modelUrl={modelo.modelUrl} heightClass="h-72" loadingLabel="Cargando modelo 3D..." />
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
+          <div className="rounded-md bg-slate-50 p-2">
+            <p className="text-xs text-slate-500">OTs</p>
+            <p className="font-bold text-slate-950">{number.format(modelo.ots || 0)}</p>
+          </div>
+          <div className="rounded-md bg-slate-50 p-2">
+            <p className="text-xs text-slate-500">Venta OT</p>
+            <p className="font-bold text-slate-950">{money(modelo.venta)}</p>
+          </div>
+          <div className="rounded-md bg-slate-50 p-2">
+            <p className="text-xs text-slate-500">Ticket promedio</p>
+            <p className="font-bold text-slate-950">{money(modelo.ticket_promedio)}</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -156,6 +230,7 @@ export default function DashboardPage({ routePage = 'dashboard' }) {
   const navigate = useNavigate();
   const page = routePage;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [modelo3dSeleccionado, setModelo3dSeleccionado] = useState(null);
   const [month, setMonth] = useState(currentMonth());
   const [local, setLocalState] = useState('Todos');
   const [meta, setMeta] = useState(monthlyGoalForLocal('Todos'));
@@ -844,15 +919,26 @@ export default function DashboardPage({ routePage = 'dashboard' }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {modelRows.map((row) => (
-                    <tr key={`${row.marca}-${row.modelo}`} className="border-b border-slate-100">
-                      <td className="py-2 pr-3 font-medium text-slate-700">{row.marca || '-'}</td>
-                      <td className="px-3 py-2 text-slate-600">{row.modelo || '-'}</td>
-                      <td className="px-3 py-2 text-right font-semibold text-slate-950">{number.format(row.ots || 0)}</td>
-                      <td className="px-3 py-2 text-right text-slate-600">{money(row.venta)}</td>
-                      <td className="py-2 pl-3 text-right font-semibold text-slate-950">{money(row.ticket_promedio)}</td>
-                    </tr>
-                  ))}
+                  {modelRows.map((row) => {
+                    const modelUrl = modelo3dPara(row.marca, row.modelo);
+                    return (
+                      <tr
+                        key={`${row.marca}-${row.modelo}`}
+                        className={`border-b border-slate-100 ${modelUrl ? 'cursor-pointer hover:bg-blue-50/60' : ''}`}
+                        onClick={() => modelUrl && setModelo3dSeleccionado({ ...row, modelUrl })}
+                        title={modelUrl ? 'Ver modelo en 3D' : undefined}
+                      >
+                        <td className="py-2 pr-3 font-medium text-slate-700">
+                          {row.marca || '-'}
+                          {modelUrl && <Box className="ml-1 inline-block text-blue-600" size={13} />}
+                        </td>
+                        <td className="px-3 py-2 text-slate-600">{row.modelo || '-'}</td>
+                        <td className="px-3 py-2 text-right font-semibold text-slate-950">{number.format(row.ots || 0)}</td>
+                        <td className="px-3 py-2 text-right text-slate-600">{money(row.venta)}</td>
+                        <td className="py-2 pl-3 text-right font-semibold text-slate-950">{money(row.ticket_promedio)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1039,6 +1125,9 @@ export default function DashboardPage({ routePage = 'dashboard' }) {
         </section>
         </div>
       </div>
+      )}
+      {modelo3dSeleccionado && (
+        <Modelo3DModal modelo={modelo3dSeleccionado} onClose={() => setModelo3dSeleccionado(null)} />
       )}
     </main>
   );
