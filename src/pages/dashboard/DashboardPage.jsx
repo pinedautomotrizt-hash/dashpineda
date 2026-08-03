@@ -269,12 +269,6 @@ function Modelo3DModal({ modelo, onClose }) {
             ))}
           </div>
         </div>
-
-        {datosMarca && (
-          <div className="mt-4 rounded-md bg-slate-900 p-3 text-center text-sm font-semibold text-white">
-            Total OT {datosMarca.marca} en {datosMarca.anio}: {number.format(datosMarca.totalOts)}
-          </div>
-        )}
       </div>
     </div>
   );
