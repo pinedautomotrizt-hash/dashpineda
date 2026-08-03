@@ -172,8 +172,27 @@ function VehicleHero() {
   );
 }
 
-// Modal simple con el visor 3D + los datos del modelo, para el ranking de modelos atendidos.
+// Lista compacta de un modelo de la marca, usada en los costados del modal.
+function ModeloMiniCard({ fila, activo }) {
+  return (
+    <div className={`rounded-md border p-2 text-xs ${activo ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-slate-50'}`}>
+      <p className={`truncate font-semibold ${activo ? 'text-blue-800' : 'text-slate-700'}`} title={fila.modelo}>
+        {fila.modelo}
+      </p>
+      <div className="mt-1 flex items-center justify-between text-slate-500">
+        <span>{number.format(fila.ots || 0)} OT</span>
+        <span className="font-medium text-slate-700">{money(fila.ticket_promedio)}</span>
+      </div>
+    </div>
+  );
+}
+
+// Modal con el visor 3D + los datos del modelo, y a los costados el resto de
+// modelos de la misma marca en lo que va del año (independiente del filtro
+// de mes/sede del dashboard).
 function Modelo3DModal({ modelo, onClose }) {
+  const [datosMarca, setDatosMarca] = useState(null);
+
   useEffect(() => {
     const onKeyDown = (event) => {
       if (event.key === 'Escape') onClose();
@@ -182,13 +201,26 @@ function Modelo3DModal({ modelo, onClose }) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
 
+  useEffect(() => {
+    let cancelado = false;
+    api.get('/dashboard/modelos-marca', { params: { marca: modelo.marca } })
+      .then(({ data }) => { if (!cancelado) setDatosMarca(data); })
+      .catch(() => { if (!cancelado) setDatosMarca(null); });
+    return () => { cancelado = true; };
+  }, [modelo.marca]);
+
+  const modelos = datosMarca?.modelos || [];
+  const mitad = Math.ceil(modelos.length / 2);
+  const columnaIzquierda = modelos.slice(0, mitad);
+  const columnaDerecha = modelos.slice(mitad);
+
   return (
     <div
       className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-2xl"
+        className="w-full max-w-5xl rounded-xl bg-white p-6 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-3 flex items-start justify-between gap-3">
@@ -205,21 +237,44 @@ function Modelo3DModal({ modelo, onClose }) {
             <X size={20} />
           </button>
         </div>
-        <Vehicle3DViewer modelUrl={modelo.modelUrl} heightClass="h-96" loadingLabel="Cargando modelo 3D..." />
-        <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-          <div className="rounded-md bg-slate-50 p-3">
-            <p className="text-sm text-slate-500">OT</p>
-            <p className="text-xl font-bold text-slate-950">{number.format(modelo.ots || 0)}</p>
+
+        <div className="grid gap-4 lg:grid-cols-[160px_1fr_160px]">
+          <div className="hidden space-y-2 lg:block">
+            {columnaIzquierda.map((fila) => (
+              <ModeloMiniCard key={fila.modelo} fila={fila} activo={fila.modelo === modelo.modelo} />
+            ))}
           </div>
-          <div className="rounded-md bg-slate-50 p-3">
-            <p className="text-sm text-slate-500">Venta OT</p>
-            <p className="text-xl font-bold text-slate-950">{money(modelo.venta)}</p>
+
+          <div>
+            <Vehicle3DViewer modelUrl={modelo.modelUrl} heightClass="h-96" loadingLabel="Cargando modelo 3D..." />
+            <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-md bg-slate-50 p-3">
+                <p className="text-sm text-slate-500">OT</p>
+                <p className="text-xl font-bold text-slate-950">{number.format(modelo.ots || 0)}</p>
+              </div>
+              <div className="rounded-md bg-slate-50 p-3">
+                <p className="text-sm text-slate-500">Venta OT</p>
+                <p className="text-xl font-bold text-slate-950">{money(modelo.venta)}</p>
+              </div>
+              <div className="rounded-md bg-slate-50 p-3">
+                <p className="text-sm text-slate-500">Ticket promedio</p>
+                <p className="text-xl font-bold text-slate-950">{money(modelo.ticket_promedio)}</p>
+              </div>
+            </div>
           </div>
-          <div className="rounded-md bg-slate-50 p-3">
-            <p className="text-sm text-slate-500">Ticket promedio</p>
-            <p className="text-xl font-bold text-slate-950">{money(modelo.ticket_promedio)}</p>
+
+          <div className="hidden space-y-2 lg:block">
+            {columnaDerecha.map((fila) => (
+              <ModeloMiniCard key={fila.modelo} fila={fila} activo={fila.modelo === modelo.modelo} />
+            ))}
           </div>
         </div>
+
+        {datosMarca && (
+          <div className="mt-4 rounded-md bg-slate-900 p-3 text-center text-sm font-semibold text-white">
+            Total OT {datosMarca.marca} en {datosMarca.anio}: {number.format(datosMarca.totalOts)}
+          </div>
+        )}
       </div>
     </div>
   );
