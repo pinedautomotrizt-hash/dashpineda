@@ -839,7 +839,8 @@ export default function DashboardPage({ routePage = 'dashboard' }) {
                     <th className="py-2 pr-3 font-semibold">Marca</th>
                     <th className="px-3 py-2 font-semibold">Modelo</th>
                     <th className="px-3 py-2 text-right font-semibold">OTs</th>
-                    <th className="py-2 pl-3 text-right font-semibold">Venta OT</th>
+                    <th className="px-3 py-2 text-right font-semibold">Venta OT</th>
+                    <th className="py-2 pl-3 text-right font-semibold">Ticket promedio</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -848,7 +849,8 @@ export default function DashboardPage({ routePage = 'dashboard' }) {
                       <td className="py-2 pr-3 font-medium text-slate-700">{row.marca || '-'}</td>
                       <td className="px-3 py-2 text-slate-600">{row.modelo || '-'}</td>
                       <td className="px-3 py-2 text-right font-semibold text-slate-950">{number.format(row.ots || 0)}</td>
-                      <td className="py-2 pl-3 text-right text-slate-600">{money(row.venta)}</td>
+                      <td className="px-3 py-2 text-right text-slate-600">{money(row.venta)}</td>
+                      <td className="py-2 pl-3 text-right font-semibold text-slate-950">{money(row.ticket_promedio)}</td>
                     </tr>
                   ))}
                 </tbody>
