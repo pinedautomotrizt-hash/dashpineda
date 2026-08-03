@@ -3,7 +3,7 @@ import ReactECharts from 'echarts-for-react';
 import * as echarts from 'echarts';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { Banknote, Box, CalendarDays, Car, Gauge, Goal, ReceiptText, RefreshCw, TrendingUp, X } from 'lucide-react';
+import { Banknote, CalendarDays, Car, Gauge, Goal, ReceiptText, RefreshCw, TrendingUp, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api';
 import ModuleSidebar from '../../components/layout/ModuleSidebar';
@@ -55,8 +55,8 @@ function Vehicle3DViewer({ modelUrl, heightClass = 'h-64', loadingLabel = 'Carga
     scene.background = new THREE.Color('#f8fafc');
 
     const camera = new THREE.PerspectiveCamera(35, mount.clientWidth / mount.clientHeight, 0.1, 100);
-    camera.position.set(4.8, 2.2, 5.4);
-    camera.lookAt(0, 0.65, 0);
+    camera.position.set(4.8, 1.7, 5.4);
+    camera.lookAt(0, 0.25, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setSize(mount.clientWidth, mount.clientHeight);
@@ -188,13 +188,13 @@ function Modelo3DModal({ modelo, onClose }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-xl bg-white p-5 shadow-2xl"
+        className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{modelo.marca}</p>
-            <h3 className="text-xl font-bold text-slate-950">{modelo.modelo}</h3>
+            <h3 className="text-2xl font-bold text-slate-950">{modelo.modelo}</h3>
           </div>
           <button
             type="button"
@@ -205,19 +205,19 @@ function Modelo3DModal({ modelo, onClose }) {
             <X size={20} />
           </button>
         </div>
-        <Vehicle3DViewer modelUrl={modelo.modelUrl} heightClass="h-72" loadingLabel="Cargando modelo 3D..." />
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
-          <div className="rounded-md bg-slate-50 p-2">
-            <p className="text-xs text-slate-500">OTs</p>
-            <p className="font-bold text-slate-950">{number.format(modelo.ots || 0)}</p>
+        <Vehicle3DViewer modelUrl={modelo.modelUrl} heightClass="h-96" loadingLabel="Cargando modelo 3D..." />
+        <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+          <div className="rounded-md bg-slate-50 p-3">
+            <p className="text-sm text-slate-500">OT</p>
+            <p className="text-xl font-bold text-slate-950">{number.format(modelo.ots || 0)}</p>
           </div>
-          <div className="rounded-md bg-slate-50 p-2">
-            <p className="text-xs text-slate-500">Venta OT</p>
-            <p className="font-bold text-slate-950">{money(modelo.venta)}</p>
+          <div className="rounded-md bg-slate-50 p-3">
+            <p className="text-sm text-slate-500">Venta OT</p>
+            <p className="text-xl font-bold text-slate-950">{money(modelo.venta)}</p>
           </div>
-          <div className="rounded-md bg-slate-50 p-2">
-            <p className="text-xs text-slate-500">Ticket promedio</p>
-            <p className="font-bold text-slate-950">{money(modelo.ticket_promedio)}</p>
+          <div className="rounded-md bg-slate-50 p-3">
+            <p className="text-sm text-slate-500">Ticket promedio</p>
+            <p className="text-xl font-bold text-slate-950">{money(modelo.ticket_promedio)}</p>
           </div>
         </div>
       </div>
@@ -921,18 +921,21 @@ export default function DashboardPage({ routePage = 'dashboard' }) {
                 <tbody>
                   {modelRows.map((row) => {
                     const modelUrl = modelo3dPara(row.marca, row.modelo);
+                    const abrirModal = () => modelUrl && setModelo3dSeleccionado({ ...row, modelUrl });
                     return (
-                      <tr
-                        key={`${row.marca}-${row.modelo}`}
-                        className={`border-b border-slate-100 ${modelUrl ? 'cursor-pointer hover:bg-blue-50/60' : ''}`}
-                        onClick={() => modelUrl && setModelo3dSeleccionado({ ...row, modelUrl })}
-                        title={modelUrl ? 'Ver modelo en 3D' : undefined}
-                      >
-                        <td className="py-2 pr-3 font-medium text-slate-700">
+                      <tr key={`${row.marca}-${row.modelo}`} className="border-b border-slate-100">
+                        <td
+                          className={`py-2 pr-3 font-medium text-slate-700 ${modelUrl ? 'cursor-pointer' : ''}`}
+                          onClick={abrirModal}
+                        >
                           {row.marca || '-'}
-                          {modelUrl && <Box className="ml-1 inline-block text-blue-600" size={13} />}
                         </td>
-                        <td className="px-3 py-2 text-slate-600">{row.modelo || '-'}</td>
+                        <td
+                          className={`px-3 py-2 text-slate-600 ${modelUrl ? 'cursor-pointer' : ''}`}
+                          onClick={abrirModal}
+                        >
+                          {row.modelo || '-'}
+                        </td>
                         <td className="px-3 py-2 text-right font-semibold text-slate-950">{number.format(row.ots || 0)}</td>
                         <td className="px-3 py-2 text-right text-slate-600">{money(row.venta)}</td>
                         <td className="py-2 pl-3 text-right font-semibold text-slate-950">{money(row.ticket_promedio)}</td>
