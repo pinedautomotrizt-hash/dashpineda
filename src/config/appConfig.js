@@ -30,6 +30,7 @@ export const APP_PATHS = Object.freeze({
   asesores: '/asesores',
   importaciones: '/importaciones',
   reportes: '/reportes',
+  empresas: '/empresas',
 });
 
 // roles: quienes pueden ver el enlace/entrar a la ruta. Sin "roles" = cualquier usuario logueado.
@@ -38,6 +39,7 @@ export const APP_MODULES = Object.freeze([
   { id: 'resumen-mensual', path: APP_PATHS.resumenMensual, label: 'Resumen mensual', icon: 'calendar' },
   { id: 'dashboard', path: APP_PATHS.dashboard, label: 'Operativo', icon: 'dashboard' },
   { id: 'asesores', path: APP_PATHS.asesores, label: 'Por Asesor', icon: 'users' },
+  { id: 'empresas', path: APP_PATHS.empresas, label: 'Empresas', icon: 'building' },
   { id: 'importaciones', path: APP_PATHS.importaciones, label: 'Importaciones', icon: 'upload', roles: ['ADMIN'] },
   { id: 'reportes', path: APP_PATHS.reportes, label: 'Reportes Excel', icon: 'download' },
 ]);

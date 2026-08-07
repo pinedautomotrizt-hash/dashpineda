@@ -31,17 +31,21 @@ function Sidebar({ collapsed, setCollapsed }) {
   return <ModuleSidebar activePath={APP_PATHS.dashboard} collapsed={collapsed} onCollapsedChange={setCollapsed} />;
 }
 
+
 // Mapa marca/modelo -> archivo .glb disponible. Solo las combinaciones listadas
 // aca muestran el boton de "ver en 3D" en el ranking de modelos atendidos.
 const MODEL_3D_ASSETS = {
   'FORD|RANGER': '/assets/ford_ranger_2023.glb',
 };
 
+
 function modelo3dPara(marca, modelo) {
   const clave = `${String(marca || '').trim().toUpperCase()}|${String(modelo || '').trim().toUpperCase()}`;
   return MODEL_3D_ASSETS[clave] || null;
 }
 
+
+//Modelo Vehiculo en 3D
 function Vehicle3DViewer({ modelUrl, heightClass = 'h-64', loadingLabel = 'Cargando modelo 3D...' }) {
   const mountRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -101,11 +105,6 @@ function Vehicle3DViewer({ modelUrl, heightClass = 'h-64', loadingLabel = 'Carga
         const size = box.getSize(new THREE.Vector3());
         const maxSize = Math.max(size.x, size.y, size.z) || 1;
         const scale = 3.9 / maxSize;
-
-
-
-
-
 
         // El centrado tiene que calcularse DESPUES de escalar: position no se
         // reescala junto con el modelo, así que centrar con el tamaño original
