@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { Building2, ShieldAlert } from 'lucide-react';
+import { Banknote, Building2, ShieldAlert } from 'lucide-react';
 import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
 import { Card, Panel, LoadingOverlay } from '../../components/dashboard/DashboardPrimitives';
-import { number } from '../../utils/formatters';
+import { money, moneyByCurrency, number } from '../../utils/formatters';
 
 const GRUPO_LABELS = {
   FLOTAS: 'Flotas',
@@ -31,6 +31,18 @@ export default function EmpresasDashboard({ data, filters, error }) {
     () => porEmpresa
       .filter((row) => Number(row.reprocesos) > 0)
       .sort((a, b) => Number(b.reprocesos) - Number(a.reprocesos)),
+    [porEmpresa],
+  );
+  const empresasFacturadoSoles = useMemo(
+    () => porEmpresa
+      .filter((row) => Number(row.monto_facturado_soles) > 0)
+      .sort((a, b) => Number(b.monto_facturado_soles) - Number(a.monto_facturado_soles)),
+    [porEmpresa],
+  );
+  const empresasFacturadoDolares = useMemo(
+    () => porEmpresa
+      .filter((row) => Number(row.monto_facturado_dolares) > 0)
+      .sort((a, b) => Number(b.monto_facturado_dolares) - Number(a.monto_facturado_dolares)),
     [porEmpresa],
   );
 
@@ -84,6 +96,26 @@ export default function EmpresasDashboard({ data, filters, error }) {
     }],
   };
 
+  const buildFacturadoOption = (rows, field, color) => ({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => money(value) },
+    grid: { left: 200, right: 25, top: 15, bottom: 25 },
+    xAxis: { type: 'value', axisLabel: { formatter: (value) => `${Math.round(value / 1000)}k` } },
+    yAxis: {
+      type: 'category',
+      inverse: true,
+      data: rows.map((row) => row.empresa),
+      axisLabel: { width: 180, overflow: 'truncate' },
+    },
+    series: [{
+      type: 'bar',
+      barMaxWidth: 22,
+      itemStyle: { color, borderRadius: [0, 5, 5, 0] },
+      data: rows.map((row) => Number(row[field] || 0)),
+    }],
+  });
+  const facturadoSolesOption = buildFacturadoOption(empresasFacturadoSoles, 'monto_facturado_soles', '#059669');
+  const facturadoDolaresOption = buildFacturadoOption(empresasFacturadoDolares, 'monto_facturado_dolares', '#0891b2');
+
   return (
     <div
       className={`mx-auto max-w-[1440px] px-4 pb-5 pt-[4.5rem] transition-all duration-200 sm:px-6 lg:px-8 lg:pt-5 ${filters.sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}
@@ -112,7 +144,7 @@ export default function EmpresasDashboard({ data, filters, error }) {
       <div className="relative space-y-4">
         <LoadingOverlay show={filters.loading} />
 
-        <section className="grid gap-3 sm:grid-cols-2">
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Card
             label="Unidades atendidas (general)"
             value={number.format(totalGeneral.unidades || 0)}
@@ -126,6 +158,20 @@ export default function EmpresasDashboard({ data, filters, error }) {
             hint="OT con reproceso o reclamo de garantía, cualquier cliente"
             icon={ShieldAlert}
             tone="rose"
+          />
+          <Card
+            label="Monto facturado (Soles)"
+            value={moneyByCurrency(totalGeneral.monto_facturado_soles, 'SOLES')}
+            hint="registro_venta, mismas reglas que Facturación"
+            icon={Banknote}
+            tone="green"
+          />
+          <Card
+            label="Monto facturado (Dólares)"
+            value={moneyByCurrency(totalGeneral.monto_facturado_dolares, 'DOLARES')}
+            hint="registro_venta, mismas reglas que Facturación"
+            icon={Banknote}
+            tone="violet"
           />
         </section>
 
@@ -177,15 +223,53 @@ export default function EmpresasDashboard({ data, filters, error }) {
           )}
         </Panel>
 
+        <Panel
+          title="Monto facturado por empresa · Soles"
+          right={<span className="text-xs text-slate-500">registro_venta, sin convertir</span>}
+        >
+          {empresasFacturadoSoles.length ? (
+            <ReactECharts
+              option={facturadoSolesOption}
+              style={{ height: Math.max(220, empresasFacturadoSoles.length * 38) }}
+              notMerge
+              lazyUpdate
+            />
+          ) : (
+            <div className="grid h-60 place-items-center text-sm text-slate-500">
+              Sin facturación en soles para este periodo.
+            </div>
+          )}
+        </Panel>
+
+        <Panel
+          title="Monto facturado por empresa · Dólares"
+          right={<span className="text-xs text-slate-500">registro_venta, sin convertir</span>}
+        >
+          {empresasFacturadoDolares.length ? (
+            <ReactECharts
+              option={facturadoDolaresOption}
+              style={{ height: Math.max(220, empresasFacturadoDolares.length * 38) }}
+              notMerge
+              lazyUpdate
+            />
+          ) : (
+            <div className="grid h-60 place-items-center text-sm text-slate-500">
+              Sin facturación en dólares para este periodo.
+            </div>
+          )}
+        </Panel>
+
         <Panel title="Detalle por empresa">
           <div className="overflow-x-auto">
-            <table className="min-w-[720px] w-full text-left text-sm">
+            <table className="min-w-[980px] w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-xs text-slate-500">
                   <th className="py-2 pr-3 font-semibold">Empresa</th>
                   <th className="px-3 py-2 font-semibold">Categoría</th>
                   <th className="px-3 py-2 text-right font-semibold">Unidades atendidas</th>
-                  <th className="py-2 pl-3 text-right font-semibold">Reprocesos / garantías</th>
+                  <th className="px-3 py-2 text-right font-semibold">Reprocesos / garantías</th>
+                  <th className="px-3 py-2 text-right font-semibold">Monto facturado (S/)</th>
+                  <th className="py-2 pl-3 text-right font-semibold">Monto facturado (US$)</th>
                 </tr>
               </thead>
               <tbody>
@@ -196,8 +280,14 @@ export default function EmpresasDashboard({ data, filters, error }) {
                     </td>
                     <td className="px-3 py-2 text-slate-600">{friendlyGrupo(row.grupo_cliente)}</td>
                     <td className="px-3 py-2 text-right text-slate-600">{number.format(row.unidades || 0)}</td>
-                    <td className="py-2 pl-3 text-right font-semibold text-slate-950">
+                    <td className="px-3 py-2 text-right font-semibold text-slate-950">
                       {number.format(row.reprocesos || 0)}
+                    </td>
+                    <td className="px-3 py-2 text-right text-emerald-700">
+                      {moneyByCurrency(row.monto_facturado_soles, 'SOLES')}
+                    </td>
+                    <td className="py-2 pl-3 text-right text-cyan-700">
+                      {moneyByCurrency(row.monto_facturado_dolares, 'DOLARES')}
                     </td>
                   </tr>
                 ))}
@@ -205,7 +295,9 @@ export default function EmpresasDashboard({ data, filters, error }) {
                   <td className="py-2 pr-3">TOTAL GENERAL</td>
                   <td className="px-3 py-2 text-slate-500">Todas las categorías</td>
                   <td className="px-3 py-2 text-right">{number.format(totalGeneral.unidades || 0)}</td>
-                  <td className="py-2 pl-3 text-right">{number.format(totalGeneral.reprocesos || 0)}</td>
+                  <td className="px-3 py-2 text-right">{number.format(totalGeneral.reprocesos || 0)}</td>
+                  <td className="px-3 py-2 text-right">{moneyByCurrency(totalGeneral.monto_facturado_soles, 'SOLES')}</td>
+                  <td className="py-2 pl-3 text-right">{moneyByCurrency(totalGeneral.monto_facturado_dolares, 'DOLARES')}</td>
                 </tr>
               </tbody>
             </table>
