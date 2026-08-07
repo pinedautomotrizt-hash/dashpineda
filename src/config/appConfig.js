@@ -31,7 +31,13 @@ export const APP_PATHS = Object.freeze({
   importaciones: '/importaciones',
   reportes: '/reportes',
   empresas: '/empresas',
+  empresaDetalle: '/empresas/:empresa',
 });
+
+// La ruta de detalle usa el nombre de la empresa como clave (no hay id numerico).
+export function empresaDetallePath(nombre) {
+  return `/empresas/${encodeURIComponent(nombre)}`;
+}
 
 // roles: quienes pueden ver el enlace/entrar a la ruta. Sin "roles" = cualquier usuario logueado.
 export const APP_MODULES = Object.freeze([

@@ -5,8 +5,6 @@ import DashboardFilterBar from "../../components/dashboard/DashboardFilterBar";
 import { Panel, LoadingOverlay } from "../../components/dashboard/DashboardPrimitives";
 import { money, moneyByCurrency, number, pct, shortDate } from "../../utils/formatters";
 
-
-
 function AdvisorOperationsPanels({ advisorVisuals, advisorRows }) {
   return (
     <section className="space-y-4">

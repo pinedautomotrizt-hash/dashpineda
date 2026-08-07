@@ -5,6 +5,7 @@ import ResumenMensualPage from '../pages/resumen-mensual/ResumenMensualPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import AsesoresPage from '../pages/asesores/AsesoresPage';
 import EmpresasPage from '../pages/empresas/EmpresasPage';
+import EmpresaDetallePage from '../pages/empresas/EmpresaDetallePage';
 import ImportacionesPage from '../pages/importaciones/ImportacionesPage';
 import ReportesPage from '../pages/reportes/ReportesPage';
 import LoginPage from '../pages/login/LoginPage';
@@ -23,6 +24,7 @@ export default function AppRouter() {
           <Route path={APP_PATHS.dashboard} element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path={APP_PATHS.asesores} element={<ProtectedRoute><AsesoresPage /></ProtectedRoute>} />
           <Route path={APP_PATHS.empresas} element={<ProtectedRoute><EmpresasPage /></ProtectedRoute>} />
+          <Route path={APP_PATHS.empresaDetalle} element={<ProtectedRoute><EmpresaDetallePage /></ProtectedRoute>} />
           <Route
             path={APP_PATHS.importaciones}
             element={<ProtectedRoute roles={['ADMIN']}><ImportacionesPage /></ProtectedRoute>}

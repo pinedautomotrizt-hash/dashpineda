@@ -1,51 +1,43 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { Banknote, Building2, ShieldAlert } from 'lucide-react';
+import { Building2, ChevronLeft, ChevronRight, Search, ShieldAlert } from 'lucide-react';
 import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
 import { Card, Panel, LoadingOverlay } from '../../components/dashboard/DashboardPrimitives';
-import { money, moneyByCurrency, number } from '../../utils/formatters';
+import { number } from '../../utils/formatters';
+import { friendlyGrupo } from './empresasLabels';
+import EmpresaCard from './EmpresaCard';
 
-const GRUPO_LABELS = {
-  FLOTAS: 'Flotas',
-  NINGUNO: 'Particulares',
-  'COMPAÑIAS DE SEGURO': 'Compañías de seguro',
-  TRANSPORTISTA: 'Transportista',
-  PREFERENTE: 'Preferente',
-  'OTRAS EMPRESAS': 'Otras empresas',
-  'SIN DATO': 'Sin dato',
-};
-
-function friendlyGrupo(grupo) {
-  return GRUPO_LABELS[grupo] || grupo || 'Sin dato';
-}
+const EMPRESAS_POR_PAGINA = 12;
 
 export default function EmpresasDashboard({ data, filters, error }) {
   const porTipoCliente = data?.porTipoCliente || [];
   const porEmpresa = data?.porEmpresa || [];
   const totalGeneral = data?.totalGeneral || { unidades: 0, reprocesos: 0 };
 
-  const empresasPorUnidades = useMemo(
+  const [busqueda, setBusqueda] = useState('');
+  const [paginaActual, setPaginaActual] = useState(1);
+
+  const empresasOrdenadas = useMemo(
     () => [...porEmpresa].sort((a, b) => Number(b.unidades) - Number(a.unidades)),
     [porEmpresa],
   );
-  const empresasConReprocesos = useMemo(
-    () => porEmpresa
-      .filter((row) => Number(row.reprocesos) > 0)
-      .sort((a, b) => Number(b.reprocesos) - Number(a.reprocesos)),
-    [porEmpresa],
+  const empresasFiltradas = useMemo(() => {
+    const termino = busqueda.trim().toLowerCase();
+    if (!termino) return empresasOrdenadas;
+    return empresasOrdenadas.filter((row) => row.empresa.toLowerCase().includes(termino));
+  }, [empresasOrdenadas, busqueda]);
+
+  const totalPaginas = Math.max(1, Math.ceil(empresasFiltradas.length / EMPRESAS_POR_PAGINA));
+  const paginaSegura = Math.min(paginaActual, totalPaginas);
+  const empresasPagina = empresasFiltradas.slice(
+    (paginaSegura - 1) * EMPRESAS_POR_PAGINA,
+    paginaSegura * EMPRESAS_POR_PAGINA,
   );
-  const empresasFacturadoSoles = useMemo(
-    () => porEmpresa
-      .filter((row) => Number(row.monto_facturado_soles) > 0)
-      .sort((a, b) => Number(b.monto_facturado_soles) - Number(a.monto_facturado_soles)),
-    [porEmpresa],
-  );
-  const empresasFacturadoDolares = useMemo(
-    () => porEmpresa
-      .filter((row) => Number(row.monto_facturado_dolares) > 0)
-      .sort((a, b) => Number(b.monto_facturado_dolares) - Number(a.monto_facturado_dolares)),
-    [porEmpresa],
-  );
+
+  const handleBusqueda = (valor) => {
+    setBusqueda(valor);
+    setPaginaActual(1);
+  };
 
   const tipoClienteOption = {
     tooltip: { trigger: 'item', valueFormatter: (value) => number.format(value) },
@@ -60,62 +52,6 @@ export default function EmpresasDashboard({ data, filters, error }) {
       })),
     }],
   };
-
-  const empresaUnidadesOption = {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => number.format(value) },
-    grid: { left: 200, right: 25, top: 15, bottom: 25 },
-    xAxis: { type: 'value', axisLabel: { formatter: (value) => number.format(value) } },
-    yAxis: {
-      type: 'category',
-      inverse: true,
-      data: empresasPorUnidades.map((row) => row.empresa),
-      axisLabel: { width: 180, overflow: 'truncate' },
-    },
-    series: [{
-      type: 'bar',
-      barMaxWidth: 22,
-      itemStyle: { color: '#155eef', borderRadius: [0, 5, 5, 0] },
-      data: empresasPorUnidades.map((row) => Number(row.unidades || 0)),
-    }],
-  };
-
-  const reprocesosOption = {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => number.format(value) },
-    grid: { left: 200, right: 25, top: 15, bottom: 25 },
-    xAxis: { type: 'value', axisLabel: { formatter: (value) => number.format(value) } },
-    yAxis: {
-      type: 'category',
-      inverse: true,
-      data: empresasConReprocesos.map((row) => row.empresa),
-      axisLabel: { width: 180, overflow: 'truncate' },
-    },
-    series: [{
-      type: 'bar',
-      barMaxWidth: 22,
-      itemStyle: { color: '#e11d48', borderRadius: [0, 5, 5, 0] },
-      data: empresasConReprocesos.map((row) => Number(row.reprocesos || 0)),
-    }],
-  };
-
-  const buildFacturadoOption = (rows, field, color) => ({
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => money(value) },
-    grid: { left: 200, right: 25, top: 15, bottom: 25 },
-    xAxis: { type: 'value', axisLabel: { formatter: (value) => `${Math.round(value / 1000)}k` } },
-    yAxis: {
-      type: 'category',
-      inverse: true,
-      data: rows.map((row) => row.empresa),
-      axisLabel: { width: 180, overflow: 'truncate' },
-    },
-    series: [{
-      type: 'bar',
-      barMaxWidth: 22,
-      itemStyle: { color, borderRadius: [0, 5, 5, 0] },
-      data: rows.map((row) => Number(row[field] || 0)),
-    }],
-  });
-  const facturadoSolesOption = buildFacturadoOption(empresasFacturadoSoles, 'monto_facturado_soles', '#059669');
-  const facturadoDolaresOption = buildFacturadoOption(empresasFacturadoDolares, 'monto_facturado_dolares', '#0891b2');
 
   return (
     <div
@@ -145,7 +81,7 @@ export default function EmpresasDashboard({ data, filters, error }) {
       <div className="relative space-y-4">
         <LoadingOverlay show={filters.loading} />
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-3 sm:grid-cols-2">
           <Card
             label="Unidades atendidas (general)"
             value={number.format(totalGeneral.unidades || 0)}
@@ -159,20 +95,6 @@ export default function EmpresasDashboard({ data, filters, error }) {
             hint="OT con reproceso o reclamo de garantía, cualquier cliente"
             icon={ShieldAlert}
             tone="rose"
-          />
-          <Card
-            label="Monto facturado (Soles)"
-            value={moneyByCurrency(totalGeneral.monto_facturado_soles, 'SOLES')}
-            hint="registro_venta, mismas reglas que Facturación"
-            icon={Banknote}
-            tone="green"
-          />
-          <Card
-            label="Monto facturado (Dólares)"
-            value={moneyByCurrency(totalGeneral.monto_facturado_dolares, 'DOLARES')}
-            hint="registro_venta, mismas reglas que Facturación"
-            icon={Banknote}
-            tone="violet"
           />
         </section>
 
@@ -189,120 +111,59 @@ export default function EmpresasDashboard({ data, filters, error }) {
         </Panel>
 
         <Panel
-          title="Unidades atendidas por empresa"
-          right={<span className="text-xs text-slate-500">Flotas, seguros y transportistas</span>}
-        >
-          {empresasPorUnidades.length ? (
-            <ReactECharts
-              option={empresaUnidadesOption}
-              style={{ height: Math.max(280, empresasPorUnidades.length * 38) }}
-              notMerge
-              lazyUpdate
-            />
-          ) : (
-            <div className="grid h-60 place-items-center text-sm text-slate-500">
-              Sin empresas con OT en este periodo.
+          title="Empresas"
+          right={
+            <div className="relative">
+              <Search size={15} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={busqueda}
+                onChange={(event) => handleBusqueda(event.target.value)}
+                placeholder="Buscar empresa..."
+                className="h-9 w-56 rounded-md border border-slate-200 pl-8 pr-3 text-sm text-slate-950"
+              />
             </div>
-          )}
-        </Panel>
-
-        <Panel
-          title="Reprocesos y garantías internas por empresa"
-          right={<span className="text-xs text-slate-500">Solo empresas con al menos 1 caso</span>}
+          }
         >
-          {empresasConReprocesos.length ? (
-            <ReactECharts
-              option={reprocesosOption}
-              style={{ height: Math.max(220, empresasConReprocesos.length * 38) }}
-              notMerge
-              lazyUpdate
-            />
-          ) : (
-            <div className="grid h-60 place-items-center text-sm text-slate-500">
-              Sin reprocesos ni reclamos de garantía en este periodo.
-            </div>
-          )}
-        </Panel>
-
-        <Panel
-          title="Monto facturado por empresa · Soles"
-          right={<span className="text-xs text-slate-500">registro_venta, sin convertir</span>}
-        >
-          {empresasFacturadoSoles.length ? (
-            <ReactECharts
-              option={facturadoSolesOption}
-              style={{ height: Math.max(220, empresasFacturadoSoles.length * 38) }}
-              notMerge
-              lazyUpdate
-            />
-          ) : (
-            <div className="grid h-60 place-items-center text-sm text-slate-500">
-              Sin facturación en soles para este periodo.
-            </div>
-          )}
-        </Panel>
-
-        <Panel
-          title="Monto facturado por empresa · Dólares"
-          right={<span className="text-xs text-slate-500">registro_venta, sin convertir</span>}
-        >
-          {empresasFacturadoDolares.length ? (
-            <ReactECharts
-              option={facturadoDolaresOption}
-              style={{ height: Math.max(220, empresasFacturadoDolares.length * 38) }}
-              notMerge
-              lazyUpdate
-            />
-          ) : (
-            <div className="grid h-60 place-items-center text-sm text-slate-500">
-              Sin facturación en dólares para este periodo.
-            </div>
-          )}
-        </Panel>
-
-        <Panel title="Detalle por empresa">
-          <div className="overflow-x-auto">
-            <table className="min-w-[980px] w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 text-xs text-slate-500">
-                  <th className="py-2 pr-3 font-semibold">Empresa</th>
-                  <th className="px-3 py-2 font-semibold">Categoría</th>
-                  <th className="px-3 py-2 text-right font-semibold">Unidades atendidas</th>
-                  <th className="px-3 py-2 text-right font-semibold">Reprocesos / garantías</th>
-                  <th className="px-3 py-2 text-right font-semibold">Monto facturado (S/)</th>
-                  <th className="py-2 pl-3 text-right font-semibold">Monto facturado (US$)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {empresasPorUnidades.map((row) => (
-                  <tr key={`${row.grupo_cliente}-${row.empresa}`} className="border-b border-slate-100">
-                    <td className="max-w-[320px] truncate py-2 pr-3 text-slate-700" title={row.empresa}>
-                      {row.empresa}
-                    </td>
-                    <td className="px-3 py-2 text-slate-600">{friendlyGrupo(row.grupo_cliente)}</td>
-                    <td className="px-3 py-2 text-right text-slate-600">{number.format(row.unidades || 0)}</td>
-                    <td className="px-3 py-2 text-right font-semibold text-slate-950">
-                      {number.format(row.reprocesos || 0)}
-                    </td>
-                    <td className="px-3 py-2 text-right text-emerald-700">
-                      {moneyByCurrency(row.monto_facturado_soles, 'SOLES')}
-                    </td>
-                    <td className="py-2 pl-3 text-right text-cyan-700">
-                      {moneyByCurrency(row.monto_facturado_dolares, 'DOLARES')}
-                    </td>
-                  </tr>
+          {empresasPagina.length ? (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {empresasPagina.map((row) => (
+                  <EmpresaCard key={`${row.grupo_cliente}-${row.empresa}`} row={row} />
                 ))}
-                <tr className="border-t-2 border-slate-200 font-bold text-slate-950">
-                  <td className="py-2 pr-3">TOTAL GENERAL</td>
-                  <td className="px-3 py-2 text-slate-500">Todas las categorías</td>
-                  <td className="px-3 py-2 text-right">{number.format(totalGeneral.unidades || 0)}</td>
-                  <td className="px-3 py-2 text-right">{number.format(totalGeneral.reprocesos || 0)}</td>
-                  <td className="px-3 py-2 text-right">{moneyByCurrency(totalGeneral.monto_facturado_soles, 'SOLES')}</td>
-                  <td className="py-2 pl-3 text-right">{moneyByCurrency(totalGeneral.monto_facturado_dolares, 'DOLARES')}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+              </div>
+              <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+                <span>
+                  {empresasFiltradas.length} empresa{empresasFiltradas.length === 1 ? '' : 's'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaginaActual((p) => Math.max(1, p - 1))}
+                    disabled={paginaSegura <= 1}
+                    className="grid h-8 w-8 place-items-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <span className="text-xs font-medium">
+                    Página {paginaSegura} de {totalPaginas}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPaginaActual((p) => Math.min(totalPaginas, p + 1))}
+                    disabled={paginaSegura >= totalPaginas}
+                    className="grid h-8 w-8 place-items-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="grid h-40 place-items-center text-sm text-slate-500">
+              {busqueda ? 'Ninguna empresa coincide con la búsqueda.' : 'Sin empresas con OT en este periodo.'}
+            </div>
+          )}
         </Panel>
       </div>
     </div>
