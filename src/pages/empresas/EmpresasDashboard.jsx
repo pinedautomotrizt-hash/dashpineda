@@ -11,6 +11,7 @@ const GRUPO_LABELS = {
   'COMPAÑIAS DE SEGURO': 'Compañías de seguro',
   TRANSPORTISTA: 'Transportista',
   PREFERENTE: 'Preferente',
+  'OTRAS EMPRESAS': 'Otras empresas',
   'SIN DATO': 'Sin dato',
 };
 
