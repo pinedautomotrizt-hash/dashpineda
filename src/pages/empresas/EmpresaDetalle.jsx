@@ -4,20 +4,13 @@ import ReactECharts from 'echarts-for-react';
 import { ArrowLeft, Building2, Car, Clock, ShieldAlert, Wrench } from 'lucide-react';
 import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
 import { Card, Panel, LoadingOverlay } from '../../components/dashboard/DashboardPrimitives';
-import { number } from '../../utils/formatters';
+import { number, shortDate } from '../../utils/formatters';
 import { APP_PATHS } from '../../config/appConfig';
 import { MONTH_NAMES } from '../../config/appConfig';
 import { friendlyGrupo, friendlyEstado } from './empresasLabels';
 
 const OTROS_SERVICIO = 'Otros';
 const TOP_SERVICIOS = 9;
-
-function formatFecha(value) {
-  if (!value) return null;
-  const fecha = new Date(value);
-  if (Number.isNaN(fecha.getTime())) return null;
-  return fecha.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' });
-}
 
 export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) {
   const resumen = data?.resumen || { unidades_ot: 0, unidades_vehiculos: 0, reprocesos: 0, grupo_cliente: null };
@@ -200,8 +193,8 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
                   {tiempoTaller.detalle.map((row) => (
                     <tr key={row.nro_orden} className="border-b border-slate-100">
                       <td className="py-2 pr-3 text-slate-700">{row.placa || 'Sin placa'}</td>
-                      <td className="px-3 py-2 text-slate-600">{formatFecha(row.fecha_apertura) || '—'}</td>
-                      <td className="px-3 py-2 text-slate-600">{formatFecha(row.fecha_cierre) || 'En taller'}</td>
+                      <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_apertura) || '—'}</td>
+                      <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_cierre) || 'En taller'}</td>
                       <td className="px-3 py-2 text-slate-600">{friendlyEstado(row.estado)}</td>
                       <td className="py-2 pl-3 text-right font-semibold text-slate-950">
                         {row.dias === null ? 'En taller' : `${row.dias} d`}
