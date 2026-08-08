@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
-import { ArrowLeft, Building2, Car, Clock, Gauge, ShieldAlert, TimerReset, Wrench } from 'lucide-react';
+import { ArrowLeft, Building2, Car, Clock, Gauge, ShieldAlert, TimerReset, Wrench, X } from 'lucide-react';
 import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
 import { Card, Panel, LoadingOverlay } from '../../components/dashboard/DashboardPrimitives';
 import { number, shortDate } from '../../utils/formatters';
@@ -11,6 +11,67 @@ import { friendlyGrupo, friendlyEstado, estadoBadgeClass, RANGO_DIAS_LABELS } fr
 
 const OTROS_SERVICIO = 'Otros';
 const TOP_SERVICIOS = 9;
+
+// Mismo patron de modal que ya usa DashboardPage.jsx (fondo oscuro + tarjeta
+// blanca centrada) para no introducir un segundo estilo de modal en el proyecto.
+function OtListModal({ titulo, subtitulo, filas, onClose }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-xl font-bold text-slate-950">{titulo}</h3>
+            <p className="text-sm text-slate-500">{subtitulo}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Cerrar"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="max-h-[60vh] overflow-y-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 text-xs text-slate-500">
+                <th className="py-2 pr-3 font-semibold">Placa</th>
+                <th className="px-3 py-2 font-semibold">Entrada</th>
+                <th className="px-3 py-2 font-semibold">Salida</th>
+                <th className="px-3 py-2 font-semibold">Estado</th>
+                <th className="py-2 pl-3 text-right font-semibold">Días</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filas.map((row) => (
+                <tr key={row.nro_orden} className="border-b border-slate-100">
+                  <td className="py-2 pr-3 text-slate-700">{row.placa || 'Sin placa'}</td>
+                  <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_apertura) || '—'}</td>
+                  <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_cierre) || 'En taller'}</td>
+                  <td className="px-3 py-2">
+                    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${estadoBadgeClass(row.estado)}`}>
+                      {friendlyEstado(row.estado)}
+                    </span>
+                  </td>
+                  <td className="py-2 pl-3 text-right font-semibold text-slate-950">
+                    {row.dias === null ? 'En taller' : `${row.dias} d`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) {
   const resumen = data?.resumen || { unidades_ot: 0, unidades_vehiculos: 0, reprocesos: 0, grupo_cliente: null };
@@ -25,6 +86,8 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
     otConCierre: 0,
     distribucion: [],
     detalle: [],
+    masRapidas: [],
+    masLentas: [],
     ...(data?.tiempoTaller || {}),
   };
   const porEstado = data?.porEstado || [];
@@ -33,6 +96,11 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   const porSede = data?.porSede || [];
 
   const categoria = resumen.grupo_cliente ? friendlyGrupo(resumen.grupo_cliente) : null;
+
+  // 'rapida' | 'lenta' | null: controla el modal de detalle de tiempo en taller.
+  const [modalTiempo, setModalTiempo] = useState(null);
+  const masRapidas = tiempoTaller.masRapidas || [];
+  const masLentas = tiempoTaller.masLentas || [];
 
   const porServicioAgrupado = useMemo(() => {
     if (porServicio.length <= TOP_SERVICIOS) return porServicio;
@@ -200,20 +268,34 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
               icon={Clock}
               tone="amber"
             />
-            <Card
-              label="Más rápida"
-              value={tiempoTaller.minDias !== null ? `${tiempoTaller.minDias} días` : 'Sin datos'}
-              hint="La OT que menos tardó en el periodo"
-              icon={Gauge}
-              tone="green"
-            />
-            <Card
-              label="Más lenta"
-              value={tiempoTaller.maxDias !== null ? `${tiempoTaller.maxDias} días` : 'Sin datos'}
-              hint="La OT que más tardó en el periodo"
-              icon={TimerReset}
-              tone="rose"
-            />
+            <button
+              type="button"
+              onClick={() => masRapidas.length && setModalTiempo('rapida')}
+              disabled={!masRapidas.length}
+              className="rounded-lg text-left transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+            >
+              <Card
+                label="Más rápida"
+                value={tiempoTaller.minDias !== null ? `${tiempoTaller.minDias} días` : 'Sin datos'}
+                hint={masRapidas.length ? 'Toca para ver cuáles' : 'La OT que menos tardó en el periodo'}
+                icon={Gauge}
+                tone="green"
+              />
+            </button>
+            <button
+              type="button"
+              onClick={() => masLentas.length && setModalTiempo('lenta')}
+              disabled={!masLentas.length}
+              className="rounded-lg text-left transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+            >
+              <Card
+                label="Más lenta"
+                value={tiempoTaller.maxDias !== null ? `${tiempoTaller.maxDias} días` : 'Sin datos'}
+                hint={masLentas.length ? 'Toca para ver cuáles' : 'La OT que más tardó en el periodo'}
+                icon={TimerReset}
+                tone="rose"
+              />
+            </button>
           </div>
 
           {tiempoTaller.otConCierre > 0 && (
@@ -351,6 +433,23 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           </Panel>
         )}
       </div>
+
+      {modalTiempo === 'rapida' && (
+        <OtListModal
+          titulo="OT más rápidas"
+          subtitulo={`${masRapidas.length} OT empatadas en ${tiempoTaller.minDias} día${tiempoTaller.minDias === 1 ? '' : 's'}`}
+          filas={masRapidas}
+          onClose={() => setModalTiempo(null)}
+        />
+      )}
+      {modalTiempo === 'lenta' && (
+        <OtListModal
+          titulo="OT más lentas"
+          subtitulo={`${masLentas.length} OT empatadas en ${tiempoTaller.maxDias} día${tiempoTaller.maxDias === 1 ? '' : 's'}`}
+          filas={masLentas}
+          onClose={() => setModalTiempo(null)}
+        />
+      )}
     </div>
   );
 }
