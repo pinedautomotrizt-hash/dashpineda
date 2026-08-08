@@ -15,8 +15,18 @@ const TOP_SERVICIOS = 9;
 export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) {
   const resumen = data?.resumen || { unidades_ot: 0, unidades_vehiculos: 0, reprocesos: 0, grupo_cliente: null };
   const evolucionMensual = data?.evolucionMensual || [];
-  const tiempoTaller = data?.tiempoTaller
-    || { promedioDias: null, minDias: null, maxDias: null, otConCierre: 0, distribucion: [], detalle: [] };
+  // Merge campo por campo (no solo el objeto completo) para que la pagina no
+  // truene si el backend todavia responde con la forma vieja de tiempoTaller
+  // (por ejemplo, mientras termina de desplegar un cambio reciente).
+  const tiempoTaller = {
+    promedioDias: null,
+    minDias: null,
+    maxDias: null,
+    otConCierre: 0,
+    distribucion: [],
+    detalle: [],
+    ...(data?.tiempoTaller || {}),
+  };
   const porEstado = data?.porEstado || [];
   const porServicio = data?.porServicio || [];
   const porVehiculo = data?.porVehiculo || [];
