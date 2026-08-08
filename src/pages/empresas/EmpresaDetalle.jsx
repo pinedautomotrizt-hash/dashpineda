@@ -1,16 +1,98 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Building2, ShieldAlert } from 'lucide-react';
+import ReactECharts from 'echarts-for-react';
+import { ArrowLeft, Building2, Car, Clock, ShieldAlert, Wrench } from 'lucide-react';
 import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
-import { Card, LoadingOverlay } from '../../components/dashboard/DashboardPrimitives';
+import { Card, Panel, LoadingOverlay } from '../../components/dashboard/DashboardPrimitives';
 import { number } from '../../utils/formatters';
 import { APP_PATHS } from '../../config/appConfig';
-import { friendlyGrupo } from './empresasLabels';
+import { MONTH_NAMES } from '../../config/appConfig';
+import { friendlyGrupo, friendlyEstado } from './empresasLabels';
 
-export default function EmpresaDetalle({ nombreEmpresa, fila, filters, error }) {
-  const unidades = fila?.unidades || 0;
-  const reprocesos = fila?.reprocesos || 0;
-  const categoria = fila?.grupo_cliente ? friendlyGrupo(fila.grupo_cliente) : null;
+const OTROS_SERVICIO = 'Otros';
+const TOP_SERVICIOS = 9;
+
+function formatFecha(value) {
+  if (!value) return null;
+  const fecha = new Date(value);
+  if (Number.isNaN(fecha.getTime())) return null;
+  return fecha.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' });
+}
+
+export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) {
+  const resumen = data?.resumen || { unidades_ot: 0, unidades_vehiculos: 0, reprocesos: 0, grupo_cliente: null };
+  const evolucionMensual = data?.evolucionMensual || [];
+  const tiempoTaller = data?.tiempoTaller || { promedioDias: null, otConCierre: 0, detalle: [] };
+  const porEstado = data?.porEstado || [];
+  const porServicio = data?.porServicio || [];
+  const porVehiculo = data?.porVehiculo || [];
+  const porSede = data?.porSede || [];
+
+  const categoria = resumen.grupo_cliente ? friendlyGrupo(resumen.grupo_cliente) : null;
+
+  const porServicioAgrupado = useMemo(() => {
+    if (porServicio.length <= TOP_SERVICIOS) return porServicio;
+    const top = porServicio.slice(0, TOP_SERVICIOS);
+    const restoUnidades = porServicio.slice(TOP_SERVICIOS).reduce((sum, row) => sum + Number(row.unidades || 0), 0);
+    return [...top, { grupo_servicio: OTROS_SERVICIO, unidades: restoUnidades }];
+  }, [porServicio]);
+
+  const evolucionOption = {
+    tooltip: { trigger: 'axis' },
+    legend: { top: 0 },
+    grid: { left: 45, right: 45, top: 40, bottom: 25 },
+    xAxis: { type: 'category', data: MONTH_NAMES },
+    yAxis: [
+      { type: 'value', name: 'Unidades' },
+      { type: 'value', name: 'Reprocesos', splitLine: { show: false }, minInterval: 1 },
+    ],
+    series: [
+      {
+        name: 'Unidades atendidas',
+        type: 'bar',
+        data: evolucionMensual.map((row) => row.unidades),
+        itemStyle: { color: '#155eef', borderRadius: [4, 4, 0, 0] },
+      },
+      {
+        name: 'Reprocesos',
+        type: 'line',
+        yAxisIndex: 1,
+        symbol: 'circle',
+        symbolSize: 7,
+        data: evolucionMensual.map((row) => row.reprocesos),
+        itemStyle: { color: '#e11d48' },
+      },
+    ],
+  };
+
+  const estadoOption = {
+    tooltip: { trigger: 'item', valueFormatter: (value) => number.format(value) },
+    legend: { bottom: 0 },
+    series: [{
+      type: 'pie',
+      radius: ['45%', '70%'],
+      label: { formatter: '{b}\n{d}%' },
+      data: porEstado.map((row) => ({ name: friendlyEstado(row.estado), value: Number(row.unidades || 0) })),
+    }],
+  };
+
+  const servicioOption = {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => number.format(value) },
+    grid: { left: 190, right: 25, top: 15, bottom: 25 },
+    xAxis: { type: 'value', axisLabel: { formatter: (value) => number.format(value) } },
+    yAxis: {
+      type: 'category',
+      inverse: true,
+      data: porServicioAgrupado.map((row) => row.grupo_servicio),
+      axisLabel: { width: 170, overflow: 'truncate' },
+    },
+    series: [{
+      type: 'bar',
+      barMaxWidth: 20,
+      itemStyle: { color: '#7c3aed', borderRadius: [0, 5, 5, 0] },
+      data: porServicioAgrupado.map((row) => Number(row.unidades || 0)),
+    }],
+  };
 
   return (
     <div
@@ -47,35 +129,170 @@ export default function EmpresaDetalle({ nombreEmpresa, fila, filters, error }) 
       <div className="relative space-y-4">
         <LoadingOverlay show={filters.loading} />
 
-        <section className="grid gap-3 sm:grid-cols-2">
+        {!filters.loading && !resumen.unidades_ot && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+            Esta empresa no tuvo unidades atendidas en el mes y sede filtrados.
+          </div>
+        )}
+
+        {/* 1. Resumen */}
+        <section className="grid gap-3 sm:grid-cols-3">
           <Card
-            label="Unidades atendidas"
-            value={number.format(unidades)}
-            hint="OT únicas en el mes y sede filtrados"
+            label="Unidades atendidas (OT)"
+            value={number.format(resumen.unidades_ot)}
+            hint="Órdenes de trabajo únicas en el periodo"
             icon={Building2}
             tone="blue"
           />
           <Card
-            label="Reprocesos / garantías internas"
-            value={number.format(reprocesos)}
+            label="Vehículos distintos"
+            value={number.format(resumen.unidades_vehiculos)}
+            hint="Placas únicas atendidas en el periodo"
+            icon={Car}
+            tone="violet"
+          />
+          <Card
+            label="Reprocesos / garantías"
+            value={number.format(resumen.reprocesos)}
             hint="OT con reproceso o reclamo de garantía"
             icon={ShieldAlert}
             tone="rose"
           />
         </section>
 
-        {!filters.loading && !fila && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
-            Esta empresa no tuvo unidades atendidas en el mes y sede filtrados.
+        {/* 2. Evolución mensual */}
+        <Panel
+          title="Evolución mensual"
+          right={<span className="text-xs text-slate-500">Unidades atendidas y reprocesos, año en curso</span>}
+        >
+          <div className="h-[300px] sm:h-[340px]">
+            <ReactECharts option={evolucionOption} style={{ height: '100%' }} notMerge lazyUpdate />
           </div>
-        )}
+        </Panel>
 
-        {/*
-          Espacio reservado para indicadores adicionales de este cliente:
-          KPI de Calidad % (reprocesos / unidades), Contactabilidad (cuando
-          exista seguimiento de citas), evolución mensual, etc. Se agregan
-          aquí a medida que se definan, sin tocar la vista de lista.
-        */}
+        {/* 3. Tiempo en taller */}
+        <Panel
+          title="Tiempo en taller"
+          right={<span className="text-xs text-slate-500">Últimas 15 OT del periodo</span>}
+        >
+          <div className="mb-3 grid gap-3 sm:grid-cols-2">
+            <Card
+              label="Días promedio en taller"
+              value={tiempoTaller.promedioDias !== null ? `${tiempoTaller.promedioDias} días` : 'Sin datos'}
+              hint={`Sobre ${number.format(tiempoTaller.otConCierre)} OT ya cerradas`}
+              icon={Clock}
+              tone="amber"
+            />
+          </div>
+          {tiempoTaller.detalle.length ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-[640px] w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 text-xs text-slate-500">
+                    <th className="py-2 pr-3 font-semibold">Placa</th>
+                    <th className="px-3 py-2 font-semibold">Entrada</th>
+                    <th className="px-3 py-2 font-semibold">Salida</th>
+                    <th className="px-3 py-2 font-semibold">Estado</th>
+                    <th className="py-2 pl-3 text-right font-semibold">Días</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tiempoTaller.detalle.map((row) => (
+                    <tr key={row.nro_orden} className="border-b border-slate-100">
+                      <td className="py-2 pr-3 text-slate-700">{row.placa || 'Sin placa'}</td>
+                      <td className="px-3 py-2 text-slate-600">{formatFecha(row.fecha_apertura) || '—'}</td>
+                      <td className="px-3 py-2 text-slate-600">{formatFecha(row.fecha_cierre) || 'En taller'}</td>
+                      <td className="px-3 py-2 text-slate-600">{friendlyEstado(row.estado)}</td>
+                      <td className="py-2 pl-3 text-right font-semibold text-slate-950">
+                        {row.dias === null ? 'En taller' : `${row.dias} d`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="grid h-32 place-items-center text-sm text-slate-500">
+              Sin OT en este periodo.
+            </div>
+          )}
+        </Panel>
+
+        {/* 4 y 5: Estado actual + Composición del trabajo */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Panel title="Estado actual de sus unidades">
+            {porEstado.length ? (
+              <div className="h-[280px]">
+                <ReactECharts option={estadoOption} style={{ height: '100%' }} notMerge lazyUpdate />
+              </div>
+            ) : (
+              <div className="grid h-52 place-items-center text-sm text-slate-500">Sin datos.</div>
+            )}
+          </Panel>
+          <Panel
+            title="Composición del trabajo"
+            right={<span className="text-xs text-slate-500">Por grupo de servicio</span>}
+          >
+            {porServicioAgrupado.length ? (
+              <ReactECharts
+                option={servicioOption}
+                style={{ height: Math.max(260, porServicioAgrupado.length * 30) }}
+                notMerge
+                lazyUpdate
+              />
+            ) : (
+              <div className="grid h-52 place-items-center text-sm text-slate-500">Sin datos.</div>
+            )}
+          </Panel>
+        </div>
+
+        {/* 6. Vehículos de la flota */}
+        <Panel
+          title="Vehículos de la flota"
+          right={<span className="text-xs text-slate-500 flex items-center gap-1"><Wrench size={13} /> Marca y modelo más atendidos</span>}
+        >
+          {porVehiculo.length ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-[560px] w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 text-xs text-slate-500">
+                    <th className="py-2 pr-3 font-semibold">Marca</th>
+                    <th className="px-3 py-2 font-semibold">Modelo</th>
+                    <th className="px-3 py-2 text-right font-semibold">Vehículos</th>
+                    <th className="py-2 pl-3 text-right font-semibold">Unidades atendidas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {porVehiculo.map((row) => (
+                    <tr key={`${row.marca}-${row.modelo}`} className="border-b border-slate-100">
+                      <td className="py-2 pr-3 text-slate-700">{row.marca}</td>
+                      <td className="px-3 py-2 text-slate-600">{row.modelo}</td>
+                      <td className="px-3 py-2 text-right text-slate-600">{number.format(row.vehiculos)}</td>
+                      <td className="py-2 pl-3 text-right font-semibold text-slate-950">{number.format(row.unidades)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="grid h-32 place-items-center text-sm text-slate-500">Sin datos.</div>
+          )}
+        </Panel>
+
+        {/* 7. Por sede (condicional) */}
+        {porSede.length > 1 && (
+          <Panel title="Distribución por sede">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {porSede.map((row) => (
+                <div key={row.local_nombre} className="rounded-md bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">{row.local_nombre}</p>
+                  <p className="mt-1 text-xl font-bold text-slate-950">{number.format(row.unidades)}</p>
+                  <p className="text-xs text-slate-500">unidades atendidas</p>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        )}
       </div>
     </div>
   );
