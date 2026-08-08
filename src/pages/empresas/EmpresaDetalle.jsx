@@ -14,7 +14,9 @@ const TOP_SERVICIOS = 9;
 
 // Mismo patron de modal que ya usa DashboardPage.jsx (fondo oscuro + tarjeta
 // blanca centrada) para no introducir un segundo estilo de modal en el proyecto.
-function OtListModal({ titulo, subtitulo, filas, onClose }) {
+// Solo el "cascaron" (fondo, tarjeta, encabezado, boton cerrar) es compartido;
+// cada uso decide que tabla mostrar adentro via children.
+function DetalleModal({ titulo, subtitulo, onClose, children }) {
   return (
     <div
       className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4"
@@ -38,38 +40,75 @@ function OtListModal({ titulo, subtitulo, filas, onClose }) {
             <X size={20} />
           </button>
         </div>
-        <div className="max-h-[60vh] overflow-y-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 text-xs text-slate-500">
-                <th className="py-2 pr-3 font-semibold">Placa</th>
-                <th className="px-3 py-2 font-semibold">Entrada</th>
-                <th className="px-3 py-2 font-semibold">Salida</th>
-                <th className="px-3 py-2 font-semibold">Estado</th>
-                <th className="py-2 pl-3 text-right font-semibold">Días</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filas.map((row) => (
-                <tr key={row.nro_orden} className="border-b border-slate-100">
-                  <td className="py-2 pr-3 text-slate-700">{row.placa || 'Sin placa'}</td>
-                  <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_apertura) || '—'}</td>
-                  <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_cierre) || 'En taller'}</td>
-                  <td className="px-3 py-2">
-                    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${estadoBadgeClass(row.estado)}`}>
-                      {friendlyEstado(row.estado)}
-                    </span>
-                  </td>
-                  <td className="py-2 pl-3 text-right font-semibold text-slate-950">
-                    {row.dias === null ? 'En taller' : `${row.dias} d`}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <div className="max-h-[60vh] overflow-y-auto">{children}</div>
       </div>
     </div>
+  );
+}
+
+function OtTiempoTable({ filas }) {
+  return (
+    <table className="w-full text-left text-sm">
+      <thead>
+        <tr className="border-b border-slate-100 text-xs text-slate-500">
+          <th className="py-2 pr-3 font-semibold">Placa</th>
+          <th className="px-3 py-2 font-semibold">Entrada</th>
+          <th className="px-3 py-2 font-semibold">Salida</th>
+          <th className="px-3 py-2 font-semibold">Estado</th>
+          <th className="py-2 pl-3 text-right font-semibold">Días</th>
+        </tr>
+      </thead>
+      <tbody>
+        {filas.map((row) => (
+          <tr key={row.nro_orden} className="border-b border-slate-100">
+            <td className="py-2 pr-3 text-slate-700">{row.placa || 'Sin placa'}</td>
+            <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_apertura) || '—'}</td>
+            <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_cierre) || 'En taller'}</td>
+            <td className="px-3 py-2">
+              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${estadoBadgeClass(row.estado)}`}>
+                {friendlyEstado(row.estado)}
+              </span>
+            </td>
+            <td className="py-2 pl-3 text-right font-semibold text-slate-950">
+              {row.dias === null ? 'En taller' : `${row.dias} d`}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function OtReprocesoTable({ filas }) {
+  return (
+    <table className="w-full text-left text-sm">
+      <thead>
+        <tr className="border-b border-slate-100 text-xs text-slate-500">
+          <th className="py-2 pr-3 font-semibold">Placa</th>
+          <th className="px-3 py-2 font-semibold">Entrada</th>
+          <th className="px-3 py-2 font-semibold">Tipo</th>
+          <th className="py-2 pl-3 font-semibold">Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {filas.map((row) => (
+          <tr key={row.nro_orden} className="border-b border-slate-100">
+            <td className="py-2 pr-3 text-slate-700">{row.placa || 'Sin placa'}</td>
+            <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_apertura) || '—'}</td>
+            <td className="px-3 py-2">
+              <span className="inline-block rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">
+                {row.tipo_ot || 'Sin clasificar'}
+              </span>
+            </td>
+            <td className="py-2 pl-3">
+              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${estadoBadgeClass(row.estado)}`}>
+                {friendlyEstado(row.estado)}
+              </span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -94,11 +133,13 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   const porServicio = data?.porServicio || [];
   const porVehiculo = data?.porVehiculo || [];
   const porSede = data?.porSede || [];
+  const reprocesosDetalle = data?.reprocesosDetalle || [];
 
   const categoria = resumen.grupo_cliente ? friendlyGrupo(resumen.grupo_cliente) : null;
 
   // 'rapida' | 'lenta' | null: controla el modal de detalle de tiempo en taller.
   const [modalTiempo, setModalTiempo] = useState(null);
+  const [modalReprocesos, setModalReprocesos] = useState(false);
   const masRapidas = tiempoTaller.masRapidas || [];
   const masLentas = tiempoTaller.masLentas || [];
 
@@ -236,13 +277,20 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
             icon={Car}
             tone="violet"
           />
-          <Card
-            label="Reprocesos / garantías"
-            value={number.format(resumen.reprocesos)}
-            hint="OT con reproceso o reclamo de garantía"
-            icon={ShieldAlert}
-            tone="rose"
-          />
+          <button
+            type="button"
+            onClick={() => reprocesosDetalle.length && setModalReprocesos(true)}
+            disabled={!reprocesosDetalle.length}
+            className="rounded-lg text-left transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+          >
+            <Card
+              label="Reprocesos / garantías"
+              value={number.format(resumen.reprocesos)}
+              hint={reprocesosDetalle.length ? 'Toca para ver el detalle' : 'OT con reproceso o reclamo de garantía'}
+              icon={ShieldAlert}
+              tone="rose"
+            />
+          </button>
         </section>
 
         {/* 2. Evolución mensual */}
@@ -435,20 +483,31 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       </div>
 
       {modalTiempo === 'rapida' && (
-        <OtListModal
+        <DetalleModal
           titulo="OT más rápidas"
           subtitulo={`${masRapidas.length} OT empatadas en ${tiempoTaller.minDias} día${tiempoTaller.minDias === 1 ? '' : 's'}`}
-          filas={masRapidas}
           onClose={() => setModalTiempo(null)}
-        />
+        >
+          <OtTiempoTable filas={masRapidas} />
+        </DetalleModal>
       )}
       {modalTiempo === 'lenta' && (
-        <OtListModal
+        <DetalleModal
           titulo="OT más lentas"
           subtitulo={`${masLentas.length} OT empatadas en ${tiempoTaller.maxDias} día${tiempoTaller.maxDias === 1 ? '' : 's'}`}
-          filas={masLentas}
           onClose={() => setModalTiempo(null)}
-        />
+        >
+          <OtTiempoTable filas={masLentas} />
+        </DetalleModal>
+      )}
+      {modalReprocesos && (
+        <DetalleModal
+          titulo="Reprocesos / garantías"
+          subtitulo={`${reprocesosDetalle.length} OT con reproceso o reclamo de garantía en el periodo`}
+          onClose={() => setModalReprocesos(false)}
+        >
+          <OtReprocesoTable filas={reprocesosDetalle} />
+        </DetalleModal>
       )}
     </div>
   );

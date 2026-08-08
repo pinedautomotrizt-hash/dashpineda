@@ -4,7 +4,7 @@ import { Building2, ChevronLeft, ChevronRight, Search, ShieldAlert } from 'lucid
 import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
 import { Card, Panel, LoadingOverlay } from '../../components/dashboard/DashboardPrimitives';
 import { number } from '../../utils/formatters';
-import { friendlyGrupo } from './empresasLabels';
+import { friendlyGrupo, grupoColor } from './empresasLabels';
 import EmpresaCard from './EmpresaCard';
 
 const EMPRESAS_POR_PAGINA = 12;
@@ -49,6 +49,7 @@ export default function EmpresasDashboard({ data, filters, error }) {
       data: porTipoCliente.map((row) => ({
         name: friendlyGrupo(row.grupo_cliente),
         value: Number(row.unidades || 0),
+        itemStyle: { color: grupoColor(row.grupo_cliente) },
       })),
     }],
   };
@@ -97,18 +98,6 @@ export default function EmpresasDashboard({ data, filters, error }) {
             tone="rose"
           />
         </section>
-
-        <Panel title="Unidades atendidas por tipo de cliente">
-          {porTipoCliente.length ? (
-            <div className="h-[300px] sm:h-[340px]">
-              <ReactECharts option={tipoClienteOption} style={{ height: '100%' }} notMerge lazyUpdate />
-            </div>
-          ) : (
-            <div className="grid h-60 place-items-center text-sm text-slate-500">
-              Sin datos para este periodo.
-            </div>
-          )}
-        </Panel>
 
         <Panel
           title="Empresas"
@@ -162,6 +151,18 @@ export default function EmpresasDashboard({ data, filters, error }) {
           ) : (
             <div className="grid h-40 place-items-center text-sm text-slate-500">
               {busqueda ? 'Ninguna empresa coincide con la búsqueda.' : 'Sin empresas con OT en este periodo.'}
+            </div>
+          )}
+        </Panel>
+
+        <Panel title="Unidades atendidas por tipo de cliente">
+          {porTipoCliente.length ? (
+            <div className="h-[300px] sm:h-[340px]">
+              <ReactECharts option={tipoClienteOption} style={{ height: '100%' }} notMerge lazyUpdate />
+            </div>
+          ) : (
+            <div className="grid h-60 place-items-center text-sm text-slate-500">
+              Sin datos para este periodo.
             </div>
           )}
         </Panel>

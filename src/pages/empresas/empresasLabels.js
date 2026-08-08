@@ -12,6 +12,37 @@ export function friendlyGrupo(grupo) {
   return GRUPO_LABELS[grupo] || grupo || 'Sin dato';
 }
 
+// Color fijo por categoria (no depende del orden en que vengan del backend),
+// para que la dona de "por tipo de cliente" y los badges de las cards de
+// empresa siempre usen el mismo color por categoria, mes a mes.
+const GRUPO_COLORS = {
+  FLOTAS: '#155eef',
+  'OTRAS EMPRESAS': '#16a34a',
+  'COMPAÑIAS DE SEGURO': '#d97706',
+  TRANSPORTISTA: '#7c3aed',
+  PREFERENTE: '#0891b2',
+  NINGUNO: '#e11d48',
+  'SIN DATO': '#64748b',
+};
+
+export function grupoColor(grupo) {
+  return GRUPO_COLORS[grupo] || '#64748b';
+}
+
+const GRUPO_BADGE_CLASSES = {
+  FLOTAS: 'bg-blue-50 text-blue-700',
+  'OTRAS EMPRESAS': 'bg-emerald-50 text-emerald-700',
+  'COMPAÑIAS DE SEGURO': 'bg-amber-50 text-amber-700',
+  TRANSPORTISTA: 'bg-violet-50 text-violet-700',
+  PREFERENTE: 'bg-cyan-50 text-cyan-700',
+  NINGUNO: 'bg-rose-50 text-rose-700',
+  'SIN DATO': 'bg-slate-100 text-slate-600',
+};
+
+export function grupoBadgeClass(grupo) {
+  return GRUPO_BADGE_CLASSES[grupo] || 'bg-slate-100 text-slate-600';
+}
+
 export const ESTADO_LABELS = {
   APERTURADO: 'Aperturado',
   CERRADO: 'Cerrado',
