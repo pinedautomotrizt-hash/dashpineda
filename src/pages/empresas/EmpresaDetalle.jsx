@@ -1,13 +1,13 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
-import { ArrowLeft, Building2, Car, Clock, ShieldAlert, Wrench } from 'lucide-react';
+import { ArrowLeft, Building2, Car, Clock, Gauge, ShieldAlert, TimerReset, Wrench } from 'lucide-react';
 import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
 import { Card, Panel, LoadingOverlay } from '../../components/dashboard/DashboardPrimitives';
 import { number, shortDate } from '../../utils/formatters';
 import { APP_PATHS } from '../../config/appConfig';
 import { MONTH_NAMES } from '../../config/appConfig';
-import { friendlyGrupo, friendlyEstado } from './empresasLabels';
+import { friendlyGrupo, friendlyEstado, estadoBadgeClass, RANGO_DIAS_LABELS } from './empresasLabels';
 
 const OTROS_SERVICIO = 'Otros';
 const TOP_SERVICIOS = 9;
@@ -15,7 +15,8 @@ const TOP_SERVICIOS = 9;
 export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) {
   const resumen = data?.resumen || { unidades_ot: 0, unidades_vehiculos: 0, reprocesos: 0, grupo_cliente: null };
   const evolucionMensual = data?.evolucionMensual || [];
-  const tiempoTaller = data?.tiempoTaller || { promedioDias: null, otConCierre: 0, detalle: [] };
+  const tiempoTaller = data?.tiempoTaller
+    || { promedioDias: null, minDias: null, maxDias: null, otConCierre: 0, distribucion: [], detalle: [] };
   const porEstado = data?.porEstado || [];
   const porServicio = data?.porServicio || [];
   const porVehiculo = data?.porVehiculo || [];
@@ -66,6 +67,19 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       radius: ['45%', '70%'],
       label: { formatter: '{b}\n{d}%' },
       data: porEstado.map((row) => ({ name: friendlyEstado(row.estado), value: Number(row.unidades || 0) })),
+    }],
+  };
+
+  const distribucionOption = {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => number.format(value) },
+    grid: { left: 45, right: 20, top: 15, bottom: 25 },
+    xAxis: { type: 'category', data: tiempoTaller.distribucion.map((row) => RANGO_DIAS_LABELS[row.rango] || row.rango) },
+    yAxis: { type: 'value', minInterval: 1 },
+    series: [{
+      type: 'bar',
+      barMaxWidth: 44,
+      itemStyle: { color: '#f59e0b', borderRadius: [5, 5, 0, 0] },
+      data: tiempoTaller.distribucion.map((row) => row.cantidad),
     }],
   };
 
@@ -166,9 +180,9 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
         {/* 3. Tiempo en taller */}
         <Panel
           title="Tiempo en taller"
-          right={<span className="text-xs text-slate-500">Últimas 15 OT del periodo</span>}
+          right={<span className="text-xs text-slate-500">Días entre entrada y salida de cada OT</span>}
         >
-          <div className="mb-3 grid gap-3 sm:grid-cols-2">
+          <div className="mb-4 grid gap-3 sm:grid-cols-3">
             <Card
               label="Días promedio en taller"
               value={tiempoTaller.promedioDias !== null ? `${tiempoTaller.promedioDias} días` : 'Sin datos'}
@@ -176,34 +190,74 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
               icon={Clock}
               tone="amber"
             />
+            <Card
+              label="Más rápida"
+              value={tiempoTaller.minDias !== null ? `${tiempoTaller.minDias} días` : 'Sin datos'}
+              hint="La OT que menos tardó en el periodo"
+              icon={Gauge}
+              tone="green"
+            />
+            <Card
+              label="Más lenta"
+              value={tiempoTaller.maxDias !== null ? `${tiempoTaller.maxDias} días` : 'Sin datos'}
+              hint="La OT que más tardó en el periodo"
+              icon={TimerReset}
+              tone="rose"
+            />
           </div>
-          {tiempoTaller.detalle.length ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-[640px] w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100 text-xs text-slate-500">
-                    <th className="py-2 pr-3 font-semibold">Placa</th>
-                    <th className="px-3 py-2 font-semibold">Entrada</th>
-                    <th className="px-3 py-2 font-semibold">Salida</th>
-                    <th className="px-3 py-2 font-semibold">Estado</th>
-                    <th className="py-2 pl-3 text-right font-semibold">Días</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tiempoTaller.detalle.map((row) => (
-                    <tr key={row.nro_orden} className="border-b border-slate-100">
-                      <td className="py-2 pr-3 text-slate-700">{row.placa || 'Sin placa'}</td>
-                      <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_apertura) || '—'}</td>
-                      <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_cierre) || 'En taller'}</td>
-                      <td className="px-3 py-2 text-slate-600">{friendlyEstado(row.estado)}</td>
-                      <td className="py-2 pl-3 text-right font-semibold text-slate-950">
-                        {row.dias === null ? 'En taller' : `${row.dias} d`}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+          {tiempoTaller.otConCierre > 0 && (
+            <div className="mb-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Distribución: cuántas OT cayeron en cada rango de días
+              </p>
+              <div className="h-[220px]">
+                <ReactECharts option={distribucionOption} style={{ height: '100%' }} notMerge lazyUpdate />
+              </div>
             </div>
+          )}
+
+          {tiempoTaller.detalle.length ? (
+            <>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Últimas {tiempoTaller.detalle.length} OT del periodo
+              </p>
+              <div className="overflow-x-auto">
+                <table className="min-w-[640px] w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-xs text-slate-500">
+                      <th className="py-2 pr-3 font-semibold">Placa</th>
+                      <th className="px-3 py-2 font-semibold">Entrada</th>
+                      <th className="px-3 py-2 font-semibold">Salida</th>
+                      <th className="px-3 py-2 font-semibold">Estado</th>
+                      <th className="py-2 pl-3 text-right font-semibold">Días</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tiempoTaller.detalle.map((row) => (
+                      <tr key={row.nro_orden} className="border-b border-slate-100">
+                        <td className="py-2 pr-3 text-slate-700">{row.placa || 'Sin placa'}</td>
+                        <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_apertura) || '—'}</td>
+                        <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_cierre) || 'En taller'}</td>
+                        <td className="px-3 py-2">
+                          <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${estadoBadgeClass(row.estado)}`}>
+                            {friendlyEstado(row.estado)}
+                          </span>
+                        </td>
+                        <td className="py-2 pl-3 text-right font-semibold text-slate-950">
+                          {row.dias === null ? 'En taller' : `${row.dias} d`}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-3 text-xs text-slate-400">
+                Esta tabla es una muestra de las OT más recientes. El promedio, el mínimo/máximo y el
+                gráfico de distribución de arriba se calculan sobre todas las OT cerradas del periodo,
+                no solo las que ves aquí.
+              </p>
+            </>
           ) : (
             <div className="grid h-32 place-items-center text-sm text-slate-500">
               Sin OT en este periodo.
