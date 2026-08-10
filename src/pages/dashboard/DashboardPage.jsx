@@ -464,77 +464,38 @@ export default function DashboardPage({ routePage = 'dashboard' }) {
     };
   }, [series]);
 
-  // Mismos colores por estado que estadoOption, para que ambos graficos de
-  // esta pagina usen el mismo color por estado y no confundan al usuario.
-  const ESTADO_COLORS = {
-    FACTURADO: '#0f9f6e',
-    CERRADO: '#f59e0b',
-    APERTURADO: '#ef4444',
-    LIQUIDADO: '#64748b',
-    'FACTURADO INT': '#6366f1',
-  };
-  const RANGO_ANTIGUEDAD_LABELS = {
-    '0-7': '0-7 días',
-    '8-15': '8-15 días',
-    '16-30': '16-30 días',
-    '31-60': '31-60 días',
-    '61-90': '61-90 días',
-    '90+': '90+ días',
-  };
-
-  const backlogDistribucionOption = useMemo(() => {
-    const rows = otBacklog?.distribucionDias || [];
+  // Aperturadas vs Cerradas por sede (Callao/Trujillo), arrastre historico
+  // (no solo lo abierto dentro del mes filtrado).
+  const backlogPorSedeOption = useMemo(() => {
+    const rows = otBacklog?.porSedeEstado || [];
+    const sedes = [...new Set(rows.map((row) => row.local_nombre))];
+    const cantidadPor = (sede, estado) => Number(
+      rows.find((row) => row.local_nombre === sede && row.estado === estado)?.cantidad || 0,
+    );
     return {
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => number.format(value) },
-      grid: { left: 45, right: 20, top: 15, bottom: 30 },
-      xAxis: { type: 'category', data: rows.map((row) => RANGO_ANTIGUEDAD_LABELS[row.rango] || row.rango) },
+      legend: { top: 0 },
+      grid: { left: 45, right: 20, top: 45, bottom: 25 },
+      xAxis: { type: 'category', data: sedes },
       yAxis: { type: 'value', minInterval: 1 },
-      series: [{
-        type: 'bar',
-        barMaxWidth: 48,
-        itemStyle: { color: '#dc2626', borderRadius: [5, 5, 0, 0] },
-        data: rows.map((row) => Number(row.cantidad || 0)),
-      }],
+      series: [
+        {
+          name: 'Aperturado',
+          type: 'bar',
+          barMaxWidth: 60,
+          itemStyle: { color: '#ef4444', borderRadius: [5, 5, 0, 0] },
+          data: sedes.map((sede) => cantidadPor(sede, 'APERTURADO')),
+        },
+        {
+          name: 'Cerrado',
+          type: 'bar',
+          barMaxWidth: 60,
+          itemStyle: { color: '#f59e0b', borderRadius: [5, 5, 0, 0] },
+          data: sedes.map((sede) => cantidadPor(sede, 'CERRADO')),
+        },
+      ],
     };
   }, [otBacklog]);
-
-  const backlogEstadoOption = useMemo(() => {
-    const rows = otBacklog?.resumenPorEstado || [];
-    return {
-      tooltip: {
-        trigger: 'item',
-        formatter: ({ data }) => `${data.name}<br/>OTs: ${number.format(data.value)}<br/>Valor pendiente: ${money(data.valorPendiente)}`,
-      },
-      legend: { bottom: 0 },
-      series: [{
-        type: 'pie',
-        radius: ['42%', '70%'],
-        label: { formatter: '{b}\n{d}%' },
-        data: rows.map((row) => ({
-          name: row.estado || 'Sin estado',
-          value: Number(row.cantidad || 0),
-          valorPendiente: Number(row.valor_pendiente || 0),
-          itemStyle: { color: ESTADO_COLORS[row.estado] || '#155eef' },
-        })),
-      }],
-    };
-  }, [otBacklog]);
-
-  const backlogDetalle = otBacklog?.detalle || [];
-  const backlogPorSede = useMemo(() => {
-    const grupos = new Map();
-    backlogDetalle.forEach((row) => {
-      const sede = row.local_nombre || 'Sin sede';
-      if (!grupos.has(sede)) grupos.set(sede, []);
-      grupos.get(sede).push(row);
-    });
-    return [...grupos.entries()].map(([sede, filas]) => ({ sede, filas }));
-  }, [backlogDetalle]);
-  const backlogTotalOts = backlogDetalle.length;
-  const backlogValorTotal = backlogDetalle.reduce((sum, row) => sum + Number(row.valor_pendiente || 0), 0);
-  const backlogMas30Dias = (otBacklog?.distribucionDias || [])
-    .filter((row) => ['31-60', '61-90', '90+'].includes(row.rango))
-    .reduce((sum, row) => sum + Number(row.cantidad || 0), 0);
 
   const gaugeOption = useMemo(() => {
     const value = Math.min(Number(summary?.avanceMeta || 0), 150);
@@ -1148,109 +1109,13 @@ export default function DashboardPage({ routePage = 'dashboard' }) {
         </section>
 
         <section className="mb-4">
-          <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-            Backlog de OT (arrastre histórico, sin importar el mes de apertura)
-          </p>
-          <div className="mb-4 grid gap-3 md:grid-cols-3">
-            <Card
-              label="OT en backlog"
-              value={number.format(backlogTotalOts)}
-              hint="Aperturado, Cerrado o Liquidado al cierre del mes filtrado"
-              icon={CalendarDays}
-              tone="rose"
-            />
-            <Card
-              label="Valor pendiente"
-              value={money(backlogValorTotal)}
-              hint="Suma de valor de venta sin IGV de todo el backlog"
-              icon={Banknote}
-              tone="amber"
-            />
-            <Card
-              label="Con más de 30 días abiertas"
-              value={number.format(backlogMas30Dias)}
-              hint={`De un total de ${number.format(backlogTotalOts)} OT en backlog`}
-              icon={Gauge}
-              tone="rose"
-            />
-          </div>
-          <div className="mb-4 grid gap-4 xl:grid-cols-[1.2fr_.8fr]">
-            <Panel
-              title="Antigüedad del backlog"
-              right={<span className="text-xs text-slate-500">Días desde que se abrió cada OT</span>}
-            >
-              <div className="h-[260px] sm:h-[300px]">
-                <ReactECharts option={backlogDistribucionOption} style={{ height: '100%' }} notMerge lazyUpdate />
-              </div>
-            </Panel>
-            <Panel title="Backlog por estado">
-              <div className="h-[260px] sm:h-[300px]">
-                <ReactECharts option={backlogEstadoOption} style={{ height: '100%' }} notMerge lazyUpdate />
-              </div>
-            </Panel>
-          </div>
           <Panel
-            title="Detalle del backlog por sede"
-            right={<span className="text-xs text-slate-500">Ordenado de más antigua a más reciente</span>}
+            title="OT Aperturadas y Cerradas por sede"
+            right={<span className="text-xs text-slate-500">Arrastre histórico, sin importar el mes de apertura</span>}
           >
-            {backlogPorSede.length ? (
-              backlogPorSede.map(({ sede, filas }) => (
-                <div key={sede} className="mb-5 last:mb-0">
-                  <div className="mb-2 flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-slate-950">{sede}</h3>
-                    <span className="text-xs text-slate-500">{number.format(filas.length)} OT</span>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                      <thead>
-                        <tr className="border-b border-slate-100 text-xs text-slate-500">
-                          <th className="py-2 pr-3 font-semibold">OT</th>
-                          <th className="px-3 py-2 font-semibold">Cliente</th>
-                          <th className="px-3 py-2 font-semibold">Placa</th>
-                          <th className="px-3 py-2 font-semibold">Asesor</th>
-                          <th className="px-3 py-2 font-semibold">Grupo servicio</th>
-                          <th className="px-3 py-2 font-semibold">Tipo OT</th>
-                          <th className="px-3 py-2 font-semibold">Estado</th>
-                          <th className="px-3 py-2 font-semibold">Apertura</th>
-                          <th className="px-3 py-2 text-right font-semibold">Días</th>
-                          <th className="py-2 pl-3 text-right font-semibold">Valor pendiente</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filas.map((row) => (
-                          <tr key={row.nro_orden} className="border-b border-slate-100">
-                            <td className="py-2 pr-3 font-semibold text-slate-950">{row.nro_orden}</td>
-                            <td className="max-w-[220px] truncate px-3 py-2 text-slate-600" title={row.cliente}>{row.cliente || 'Sin cliente'}</td>
-                            <td className="px-3 py-2 text-slate-600">{row.placa || 'Sin placa'}</td>
-                            <td className="max-w-[200px] truncate px-3 py-2 text-slate-600" title={row.asesor}>{row.asesor}</td>
-                            <td className="px-3 py-2 text-slate-600">{row.grupo_servicio}</td>
-                            <td className="px-3 py-2 text-slate-600">{row.tipo_ot}</td>
-                            <td className="px-3 py-2">
-                              <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                                row.estado === 'APERTURADO'
-                                  ? 'bg-rose-50 text-rose-700'
-                                  : row.estado === 'CERRADO'
-                                    ? 'bg-amber-50 text-amber-700'
-                                    : 'bg-slate-100 text-slate-600'
-                              }`}>
-                                {row.estado}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_apertura)}</td>
-                            <td className="px-3 py-2 text-right font-semibold text-slate-950">{number.format(row.dias_aperturada)}</td>
-                            <td className="py-2 pl-3 text-right font-semibold text-slate-950">{money(row.valor_pendiente)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="grid h-32 place-items-center text-sm text-slate-500">
-                Sin OT pendientes de facturar en este periodo.
-              </div>
-            )}
+            <div className="h-[280px] sm:h-[320px]">
+              <ReactECharts option={backlogPorSedeOption} style={{ height: '100%' }} notMerge lazyUpdate />
+            </div>
           </Panel>
         </section>
 
