@@ -4,9 +4,11 @@ import ReactECharts from 'echarts-for-react';
 import { ArrowLeft, Building2, Car, Clock, Gauge, ShieldAlert, TimerReset, Wrench, X } from 'lucide-react';
 import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
 import { Card, Panel, LoadingOverlay } from '../../components/dashboard/DashboardPrimitives';
+import Vehicle3DViewer from '../../components/Vehicle3DViewer';
 import { number, shortDate } from '../../utils/formatters';
 import { APP_PATHS } from '../../config/appConfig';
 import { MONTH_NAMES } from '../../config/appConfig';
+import { modelo3dPara } from '../../config/vehicleModels3d';
 import { friendlyGrupo, friendlyEstado, estadoBadgeClass, estadoColor, RANGO_DIAS_LABELS } from './empresasLabels';
 
 const OTROS_SERVICIO = 'Otros';
@@ -259,6 +261,29 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
     }],
   };
 
+  // porVehiculo ya viene ordenado desc por vehiculos desde el backend, asi que
+  // el primero es "el modelo que mas viene" de esta empresa.
+  const modeloTop = porVehiculo[0] || null;
+  const modeloTop3dUrl = modeloTop ? modelo3dPara(modeloTop.marca, modeloTop.modelo) : null;
+  const vehiculoOption = {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => number.format(value) },
+    grid: { left: 170, right: 25, top: 15, bottom: 25 },
+    xAxis: { type: 'value', axisLabel: { formatter: (value) => number.format(value) } },
+    yAxis: {
+      type: 'category',
+      inverse: true,
+      data: porVehiculo.map((row) => `${row.marca} ${row.modelo}`),
+      axisLabel: { width: 150, overflow: 'truncate' },
+    },
+    series: [{
+      name: 'Vehículos',
+      type: 'bar',
+      barMaxWidth: 18,
+      itemStyle: { color: '#0891b2', borderRadius: [0, 5, 5, 0] },
+      data: porVehiculo.map((row) => Number(row.vehiculos || 0)),
+    }],
+  };
+
   return (
     <div
       className={`mx-auto max-w-[1440px] px-4 pb-5 pt-[4.5rem] transition-all duration-200 sm:px-6 lg:px-8 lg:pt-5 ${filters.sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}
@@ -454,38 +479,57 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           </Panel>
         </div>
 
-        {/* 6. Vehículos de la flota */}
-        <Panel
-          title="Vehículos de la flota"
-          right={<span className="text-xs text-slate-500 flex items-center gap-1"><Wrench size={13} /> Marca y modelo más atendidos</span>}
-        >
-          {porVehiculo.length ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-[560px] w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100 text-xs text-slate-500">
-                    <th className="py-2 pr-3 font-semibold">Marca</th>
-                    <th className="px-3 py-2 font-semibold">Modelo</th>
-                    <th className="px-3 py-2 text-right font-semibold">Vehículos</th>
-                    <th className="py-2 pl-3 text-right font-semibold">Unidades atendidas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {porVehiculo.map((row) => (
-                    <tr key={`${row.marca}-${row.modelo}`} className="border-b border-slate-100">
-                      <td className="py-2 pr-3 text-slate-700">{row.marca}</td>
-                      <td className="px-3 py-2 text-slate-600">{row.modelo}</td>
-                      <td className="px-3 py-2 text-right text-slate-600">{number.format(row.vehiculos)}</td>
-                      <td className="py-2 pl-3 text-right font-semibold text-slate-950">{number.format(row.unidades)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="grid h-32 place-items-center text-sm text-slate-500">Sin datos.</div>
-          )}
-        </Panel>
+        {/* 6. Vehículos de la flota + modelo que más viene */}
+        <div className="grid gap-4 xl:grid-cols-[1.2fr_.8fr]">
+          <Panel
+            title="Vehículos de la flota"
+            right={<span className="flex items-center gap-1 text-xs text-slate-500"><Wrench size={13} /> Marca y modelo más atendidos</span>}
+          >
+            {porVehiculo.length ? (
+              <ReactECharts
+                option={vehiculoOption}
+                style={{ height: Math.max(220, porVehiculo.length * 34) }}
+                notMerge
+                lazyUpdate
+              />
+            ) : (
+              <div className="grid h-52 place-items-center text-sm text-slate-500">Sin datos.</div>
+            )}
+          </Panel>
+
+          <Panel
+            title="Modelo que más viene"
+            right={<span className="text-xs font-medium text-cyan-700">{modeloTop ? `${modeloTop.marca} ${modeloTop.modelo}` : 'Sin datos'}</span>}
+          >
+            {modeloTop ? (
+              <>
+                {modeloTop3dUrl ? (
+                  <Vehicle3DViewer
+                    modelUrl={modeloTop3dUrl}
+                    heightClass="h-56"
+                    loadingLabel="Cargando modelo 3D..."
+                  />
+                ) : (
+                  <div className="grid h-56 place-items-center rounded-lg bg-slate-50 text-center text-sm text-slate-500">
+                    Sin modelo 3D disponible<br />para {modeloTop.marca} {modeloTop.modelo}
+                  </div>
+                )}
+                <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-md bg-slate-50 p-3">
+                    <p className="text-slate-500">Vehículos</p>
+                    <p className="mt-1 text-lg font-bold text-slate-950">{number.format(modeloTop.vehiculos || 0)}</p>
+                  </div>
+                  <div className="rounded-md bg-slate-50 p-3">
+                    <p className="text-slate-500">Unidades atendidas</p>
+                    <p className="mt-1 text-lg font-bold text-slate-950">{number.format(modeloTop.unidades || 0)}</p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="grid h-56 place-items-center text-sm text-slate-500">Sin datos.</div>
+            )}
+          </Panel>
+        </div>
 
         {/* 7. Por sede (condicional) */}
         {porSede.length > 1 && (
