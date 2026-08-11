@@ -325,22 +325,26 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       data: serviciosModeloTopAgrupado.map((row) => Number(row.unidades || 0)),
     }],
   };
+  // Treemap en vez de barras: ya hay varios graficos de barras en esta pagina,
+  // y un treemap muestra bien muchas categorias de valores chicos (1-3
+  // vehiculos) sin que se vea una lista larga de barras casi iguales.
   const vehiculoOption = {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => number.format(value) },
-    grid: { left: 170, right: 25, top: 15, bottom: 25 },
-    xAxis: { type: 'value', axisLabel: { formatter: (value) => number.format(value) } },
-    yAxis: {
-      type: 'category',
-      inverse: true,
-      data: porVehiculo.map((row) => `${row.marca} ${row.modelo}`),
-      axisLabel: { width: 150, overflow: 'truncate' },
+    tooltip: {
+      formatter: ({ name, value }) => `<strong>${name}</strong><br/>Vehículos: ${number.format(value)}`,
     },
     series: [{
-      name: 'Vehículos',
-      type: 'bar',
-      barMaxWidth: 18,
-      itemStyle: { color: '#0891b2', borderRadius: [0, 5, 5, 0] },
-      data: porVehiculo.map((row) => Number(row.vehiculos || 0)),
+      type: 'treemap',
+      roam: false,
+      nodeClick: false,
+      breadcrumb: { show: false },
+      itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 },
+      label: { show: true, formatter: '{b}\n{c}', color: '#fff', fontWeight: 600 },
+      colorMappingBy: 'index',
+      color: ['#0891b2', '#155eef', '#7c3aed', '#0f9f6e', '#f59e0b', '#e11d48', '#64748b', '#0284c7'],
+      data: porVehiculo.map((row) => ({
+        name: `${row.marca} ${row.modelo}`,
+        value: Number(row.vehiculos || 0),
+      })),
     }],
   };
 
@@ -461,7 +465,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           title="Tiempo en taller"
           right={<span className="text-xs text-slate-500">Días entre entrada y salida de cada OT</span>}
         >
-          <div className={MOSTRAR_CARDS_TIEMPO_EXTREMO ? 'mb-4 grid gap-3 sm:grid-cols-3' : 'mb-4 grid gap-3 sm:grid-cols-1 sm:max-w-xs'}>
+          <div className={MOSTRAR_CARDS_TIEMPO_EXTREMO ? 'mb-4 grid gap-3 sm:grid-cols-3' : 'mb-4 grid gap-3'}>
             <Card
               label="Días promedio en taller"
               value={tiempoTaller.promedioDias !== null ? `${tiempoTaller.promedioDias} días` : 'Sin datos'}
@@ -589,7 +593,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
             {porVehiculo.length ? (
               <ReactECharts
                 option={vehiculoOption}
-                style={{ height: Math.max(220, porVehiculo.length * 34) }}
+                style={{ height: 360 }}
                 notMerge
                 lazyUpdate
               />
