@@ -8,7 +8,6 @@ import Vehicle3DViewer from '../../components/Vehicle3DViewer';
 import { number, shortDate } from '../../utils/formatters';
 import { APP_PATHS } from '../../config/appConfig';
 import { MONTH_NAMES } from '../../config/appConfig';
-import { modelo3dPara } from '../../config/vehicleModels3d';
 import { friendlyGrupo, friendlyEstado, estadoBadgeClass, estadoColor, RANGO_DIAS_LABELS } from './empresasLabels';
 
 const OTROS_SERVICIO = 'Otros';
@@ -262,9 +261,10 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   };
 
   // porVehiculo ya viene ordenado desc por vehiculos desde el backend, asi que
-  // el primero es "el modelo que mas viene" de esta empresa.
+  // el primero es "el modelo que mas viene" de esta empresa. El visor 3D es
+  // decorativo (no hay .glb para cada marca/modelo real), mismo criterio que
+  // ya usa VehicleHero en el dashboard Operativo: siempre el mismo auto.
   const modeloTop = porVehiculo[0] || null;
-  const modeloTop3dUrl = modeloTop ? modelo3dPara(modeloTop.marca, modeloTop.modelo) : null;
   const vehiculoOption = {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => number.format(value) },
     grid: { left: 170, right: 25, top: 15, bottom: 25 },
@@ -503,17 +503,11 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           >
             {modeloTop ? (
               <>
-                {modeloTop3dUrl ? (
-                  <Vehicle3DViewer
-                    modelUrl={modeloTop3dUrl}
-                    heightClass="h-56"
-                    loadingLabel="Cargando modelo 3D..."
-                  />
-                ) : (
-                  <div className="grid h-56 place-items-center rounded-lg bg-slate-50 text-center text-sm text-slate-500">
-                    Sin modelo 3D disponible<br />para {modeloTop.marca} {modeloTop.modelo}
-                  </div>
-                )}
+                <Vehicle3DViewer
+                  modelUrl="/assets/chevrolet_camioneta_2003.glb"
+                  heightClass="h-56"
+                  loadingLabel="Cargando modelo 3D..."
+                />
                 <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                   <div className="rounded-md bg-slate-50 p-3">
                     <p className="text-slate-500">Vehículos</p>
