@@ -140,6 +140,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   const porVehiculo = data?.porVehiculo || [];
   const porSede = data?.porSede || [];
   const reprocesosDetalle = data?.reprocesosDetalle || [];
+  const repuestosMasUsados = data?.repuestosMasUsados || [];
 
   const categoria = resumen.grupo_cliente ? friendlyGrupo(resumen.grupo_cliente) : null;
 
@@ -281,6 +282,33 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       barMaxWidth: 18,
       itemStyle: { color: '#0891b2', borderRadius: [0, 5, 5, 0] },
       data: porVehiculo.map((row) => Number(row.vehiculos || 0)),
+    }],
+  };
+
+  const repuestosOption = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (items) => {
+        const item = items[0];
+        const row = repuestosMasUsados[item.dataIndex];
+        if (!row) return '';
+        return `<strong>${row.repuesto}</strong><br/>Cantidad: ${number.format(row.cantidad)}<br/>En ${number.format(row.veces)} línea(s) de OT`;
+      },
+    },
+    grid: { left: 190, right: 25, top: 15, bottom: 25 },
+    xAxis: { type: 'value', axisLabel: { formatter: (value) => number.format(value) } },
+    yAxis: {
+      type: 'category',
+      inverse: true,
+      data: repuestosMasUsados.map((row) => row.repuesto),
+      axisLabel: { width: 170, overflow: 'truncate' },
+    },
+    series: [{
+      type: 'bar',
+      barMaxWidth: 18,
+      itemStyle: { color: '#059669', borderRadius: [0, 5, 5, 0] },
+      data: repuestosMasUsados.map((row) => Number(row.cantidad || 0)),
     }],
   };
 
@@ -524,6 +552,25 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
             )}
           </Panel>
         </div>
+
+        {/* Repuestos más utilizados */}
+        <Panel
+          title="Repuestos más utilizados"
+          right={<span className="text-xs text-slate-500">Top 10 por cantidad consumida en el periodo</span>}
+        >
+          {repuestosMasUsados.length ? (
+            <ReactECharts
+              option={repuestosOption}
+              style={{ height: Math.max(260, repuestosMasUsados.length * 32) }}
+              notMerge
+              lazyUpdate
+            />
+          ) : (
+            <div className="grid h-52 place-items-center text-sm text-slate-500">
+              Sin líneas de repuestos en este periodo.
+            </div>
+          )}
+        </Panel>
 
         {/* 7. Por sede (condicional) */}
         {porSede.length > 1 && (
