@@ -300,6 +300,31 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   // decorativo (no hay .glb para cada marca/modelo real), mismo criterio que
   // ya usa VehicleHero en el dashboard Operativo: siempre el mismo auto.
   const modeloTop = porVehiculo[0] || null;
+  const serviciosModeloTop = data?.serviciosModeloTop || [];
+  const serviciosModeloTopAgrupado = useMemo(() => {
+    const TOP = 6;
+    if (serviciosModeloTop.length <= TOP) return serviciosModeloTop;
+    const top = serviciosModeloTop.slice(0, TOP);
+    const restoUnidades = serviciosModeloTop.slice(TOP).reduce((sum, row) => sum + Number(row.unidades || 0), 0);
+    return [...top, { grupo_servicio: OTROS_SERVICIO, unidades: restoUnidades }];
+  }, [serviciosModeloTop]);
+  const serviciosModeloTopOption = {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => number.format(value) },
+    grid: { left: 130, right: 20, top: 10, bottom: 20 },
+    xAxis: { type: 'value', axisLabel: { formatter: (value) => number.format(value) } },
+    yAxis: {
+      type: 'category',
+      inverse: true,
+      data: serviciosModeloTopAgrupado.map((row) => row.grupo_servicio),
+      axisLabel: { width: 110, overflow: 'truncate' },
+    },
+    series: [{
+      type: 'bar',
+      barMaxWidth: 16,
+      itemStyle: { color: '#0891b2', borderRadius: [0, 4, 4, 0] },
+      data: serviciosModeloTopAgrupado.map((row) => Number(row.unidades || 0)),
+    }],
+  };
   const vehiculoOption = {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => number.format(value) },
     grid: { left: 170, right: 25, top: 15, bottom: 25 },
@@ -594,6 +619,19 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
                     <p className="mt-1 text-lg font-bold text-slate-950">{number.format(modeloTop.unidades || 0)}</p>
                   </div>
                 </div>
+                {serviciosModeloTopAgrupado.length > 0 && (
+                  <div className="mt-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Servicios que le dieron a este modelo
+                    </p>
+                    <ReactECharts
+                      option={serviciosModeloTopOption}
+                      style={{ height: Math.max(160, serviciosModeloTopAgrupado.length * 30) }}
+                      notMerge
+                      lazyUpdate
+                    />
+                  </div>
+                )}
               </>
             ) : (
               <div className="grid h-56 place-items-center text-sm text-slate-500">Sin datos.</div>
