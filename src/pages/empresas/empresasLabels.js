@@ -67,6 +67,18 @@ export function estadoBadgeClass(estado) {
   return ESTADO_BADGE_CLASSES[estado] || 'bg-slate-100 text-slate-600';
 }
 
+const ESTADO_CHART_COLORS = {
+  APERTURADO: '#f59e0b',
+  CERRADO: '#64748b',
+  FACTURADO: '#155eef',
+  'FACTURADO INT': '#155eef',
+  LIQUIDADO: '#16a34a',
+};
+
+export function estadoColor(estado) {
+  return ESTADO_CHART_COLORS[estado] || '#155eef';
+}
+
 export const RANGO_DIAS_LABELS = {
   0: '0 días',
   1: '1 día',

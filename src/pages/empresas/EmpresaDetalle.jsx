@@ -7,10 +7,15 @@ import { Card, Panel, LoadingOverlay } from '../../components/dashboard/Dashboar
 import { number, shortDate } from '../../utils/formatters';
 import { APP_PATHS } from '../../config/appConfig';
 import { MONTH_NAMES } from '../../config/appConfig';
-import { friendlyGrupo, friendlyEstado, estadoBadgeClass, RANGO_DIAS_LABELS } from './empresasLabels';
+import { friendlyGrupo, friendlyEstado, estadoBadgeClass, estadoColor, RANGO_DIAS_LABELS } from './empresasLabels';
 
 const OTROS_SERVICIO = 'Otros';
 const TOP_SERVICIOS = 9;
+
+// Ocultas temporalmente a pedido del usuario (se van a reutilizar mas
+// adelante, por eso quedan como flag y no se borra el codigo que las arma).
+const MOSTRAR_CARD_REPROCESOS = false;
+const MOSTRAR_CARDS_TIEMPO_EXTREMO = false;
 
 // Mismo patron de modal que ya usa DashboardPage.jsx (fondo oscuro + tarjeta
 // blanca centrada) para no introducir un segundo estilo de modal en el proyecto.
@@ -202,6 +207,40 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
     }],
   };
 
+  // Reemplaza la tabla "Ultimas OT del periodo": barras horizontales de dias
+  // en taller por OT, coloreadas por estado, mismo orden que traia la tabla
+  // (mas reciente primero).
+  const detalleOtOption = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (items) => {
+        const item = items[0];
+        const row = tiempoTaller.detalle[item.dataIndex];
+        if (!row) return '';
+        const dias = row.dias === null ? 'Aún en taller' : `${row.dias} días`;
+        return `<strong>${row.placa || 'Sin placa'}</strong><br/>${friendlyEstado(row.estado)} · ${dias}`;
+      },
+    },
+    grid: { left: 140, right: 25, top: 15, bottom: 25 },
+    xAxis: { type: 'value', name: 'Días', axisLabel: { formatter: (value) => number.format(value) } },
+    yAxis: {
+      type: 'category',
+      inverse: true,
+      data: tiempoTaller.detalle.map((row) => row.placa || 'Sin placa'),
+      axisLabel: { width: 120, overflow: 'truncate' },
+    },
+    series: [{
+      type: 'bar',
+      barMaxWidth: 18,
+      itemStyle: {
+        color: (params) => estadoColor(tiempoTaller.detalle[params.dataIndex]?.estado),
+        borderRadius: [0, 5, 5, 0],
+      },
+      data: tiempoTaller.detalle.map((row) => row.dias),
+    }],
+  };
+
   const servicioOption = {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => number.format(value) },
     grid: { left: 190, right: 25, top: 15, bottom: 25 },
@@ -262,7 +301,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
         )}
 
         {/* 1. Resumen */}
-        <section className="grid gap-3 sm:grid-cols-3">
+        <section className={MOSTRAR_CARD_REPROCESOS ? 'grid gap-3 sm:grid-cols-3' : 'grid gap-3 sm:grid-cols-2'}>
           <Card
             label="Unidades atendidas (OT)"
             value={number.format(resumen.unidades_ot)}
@@ -277,20 +316,22 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
             icon={Car}
             tone="violet"
           />
-          <button
-            type="button"
-            onClick={() => reprocesosDetalle.length && setModalReprocesos(true)}
-            disabled={!reprocesosDetalle.length}
-            className="rounded-lg text-left transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
-          >
-            <Card
-              label="Reprocesos / garantías"
-              value={number.format(resumen.reprocesos)}
-              hint={reprocesosDetalle.length ? 'Toca para ver el detalle' : 'OT con reproceso o reclamo de garantía'}
-              icon={ShieldAlert}
-              tone="rose"
-            />
-          </button>
+          {MOSTRAR_CARD_REPROCESOS && (
+            <button
+              type="button"
+              onClick={() => reprocesosDetalle.length && setModalReprocesos(true)}
+              disabled={!reprocesosDetalle.length}
+              className="rounded-lg text-left transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+            >
+              <Card
+                label="Reprocesos / garantías"
+                value={number.format(resumen.reprocesos)}
+                hint={reprocesosDetalle.length ? 'Toca para ver el detalle' : 'OT con reproceso o reclamo de garantía'}
+                icon={ShieldAlert}
+                tone="rose"
+              />
+            </button>
+          )}
         </section>
 
         {/* 2. Evolución mensual */}
@@ -308,7 +349,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           title="Tiempo en taller"
           right={<span className="text-xs text-slate-500">Días entre entrada y salida de cada OT</span>}
         >
-          <div className="mb-4 grid gap-3 sm:grid-cols-3">
+          <div className={MOSTRAR_CARDS_TIEMPO_EXTREMO ? 'mb-4 grid gap-3 sm:grid-cols-3' : 'mb-4 grid gap-3 sm:grid-cols-1 sm:max-w-xs'}>
             <Card
               label="Días promedio en taller"
               value={tiempoTaller.promedioDias !== null ? `${tiempoTaller.promedioDias} días` : 'Sin datos'}
@@ -316,34 +357,38 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
               icon={Clock}
               tone="amber"
             />
-            <button
-              type="button"
-              onClick={() => masRapidas.length && setModalTiempo('rapida')}
-              disabled={!masRapidas.length}
-              className="rounded-lg text-left transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
-            >
-              <Card
-                label="Más rápida"
-                value={tiempoTaller.minDias !== null ? `${tiempoTaller.minDias} días` : 'Sin datos'}
-                hint={masRapidas.length ? 'Toca para ver cuáles' : 'La OT que menos tardó en el periodo'}
-                icon={Gauge}
-                tone="green"
-              />
-            </button>
-            <button
-              type="button"
-              onClick={() => masLentas.length && setModalTiempo('lenta')}
-              disabled={!masLentas.length}
-              className="rounded-lg text-left transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
-            >
-              <Card
-                label="Más lenta"
-                value={tiempoTaller.maxDias !== null ? `${tiempoTaller.maxDias} días` : 'Sin datos'}
-                hint={masLentas.length ? 'Toca para ver cuáles' : 'La OT que más tardó en el periodo'}
-                icon={TimerReset}
-                tone="rose"
-              />
-            </button>
+            {MOSTRAR_CARDS_TIEMPO_EXTREMO && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => masRapidas.length && setModalTiempo('rapida')}
+                  disabled={!masRapidas.length}
+                  className="rounded-lg text-left transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                >
+                  <Card
+                    label="Más rápida"
+                    value={tiempoTaller.minDias !== null ? `${tiempoTaller.minDias} días` : 'Sin datos'}
+                    hint={masRapidas.length ? 'Toca para ver cuáles' : 'La OT que menos tardó en el periodo'}
+                    icon={Gauge}
+                    tone="green"
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => masLentas.length && setModalTiempo('lenta')}
+                  disabled={!masLentas.length}
+                  className="rounded-lg text-left transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                >
+                  <Card
+                    label="Más lenta"
+                    value={tiempoTaller.maxDias !== null ? `${tiempoTaller.maxDias} días` : 'Sin datos'}
+                    hint={masLentas.length ? 'Toca para ver cuáles' : 'La OT que más tardó en el periodo'}
+                    icon={TimerReset}
+                    tone="rose"
+                  />
+                </button>
+              </>
+            )}
           </div>
 
           {tiempoTaller.otConCierre > 0 && (
@@ -362,38 +407,14 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Últimas {tiempoTaller.detalle.length} OT del periodo
               </p>
-              <div className="overflow-x-auto">
-                <table className="min-w-[640px] w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-100 text-xs text-slate-500">
-                      <th className="py-2 pr-3 font-semibold">Placa</th>
-                      <th className="px-3 py-2 font-semibold">Entrada</th>
-                      <th className="px-3 py-2 font-semibold">Salida</th>
-                      <th className="px-3 py-2 font-semibold">Estado</th>
-                      <th className="py-2 pl-3 text-right font-semibold">Días</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tiempoTaller.detalle.map((row) => (
-                      <tr key={row.nro_orden} className="border-b border-slate-100">
-                        <td className="py-2 pr-3 text-slate-700">{row.placa || 'Sin placa'}</td>
-                        <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_apertura) || '—'}</td>
-                        <td className="px-3 py-2 text-slate-600">{shortDate(row.fecha_cierre) || 'En taller'}</td>
-                        <td className="px-3 py-2">
-                          <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${estadoBadgeClass(row.estado)}`}>
-                            {friendlyEstado(row.estado)}
-                          </span>
-                        </td>
-                        <td className="py-2 pl-3 text-right font-semibold text-slate-950">
-                          {row.dias === null ? 'En taller' : `${row.dias} d`}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ReactECharts
+                option={detalleOtOption}
+                style={{ height: Math.max(260, tiempoTaller.detalle.length * 28) }}
+                notMerge
+                lazyUpdate
+              />
               <p className="mt-3 text-xs text-slate-400">
-                Esta tabla es una muestra de las OT más recientes. El promedio, el mínimo/máximo y el
+                Este gráfico es una muestra de las OT más recientes. El promedio, el mínimo/máximo y el
                 gráfico de distribución de arriba se calculan sobre todas las OT cerradas del periodo,
                 no solo las que ves aquí.
               </p>
