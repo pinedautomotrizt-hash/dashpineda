@@ -12,6 +12,8 @@ import { friendlyGrupo, friendlyEstado, estadoBadgeClass, estadoColor, RANGO_DIA
 
 const OTROS_SERVICIO = 'Otros';
 const TOP_SERVICIOS = 9;
+const TOP_TIPO_OT = 5;
+const TIPO_OT_COLORS = ['#155eef', '#f59e0b', '#e11d48', '#7c3aed', '#0891b2', '#64748b'];
 
 // Ocultas temporalmente a pedido del usuario (se van a reutilizar mas
 // adelante, por eso quedan como flag y no se borra el codigo que las arma).
@@ -137,6 +139,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   };
   const porEstado = data?.porEstado || [];
   const porServicio = data?.porServicio || [];
+  const porTipoOt = data?.porTipoOt || [];
   const porVehiculo = data?.porVehiculo || [];
   const porSede = data?.porSede || [];
   const reprocesosDetalle = data?.reprocesosDetalle || [];
@@ -156,6 +159,13 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
     const restoUnidades = porServicio.slice(TOP_SERVICIOS).reduce((sum, row) => sum + Number(row.unidades || 0), 0);
     return [...top, { grupo_servicio: OTROS_SERVICIO, unidades: restoUnidades }];
   }, [porServicio]);
+
+  const porTipoOtAgrupado = useMemo(() => {
+    if (porTipoOt.length <= TOP_TIPO_OT) return porTipoOt;
+    const top = porTipoOt.slice(0, TOP_TIPO_OT);
+    const restoUnidades = porTipoOt.slice(TOP_TIPO_OT).reduce((sum, row) => sum + Number(row.unidades || 0), 0);
+    return [...top, { tipo_ot: OTROS_SERVICIO, unidades: restoUnidades }];
+  }, [porTipoOt]);
 
   const evolucionOption = {
     tooltip: { trigger: 'axis' },
@@ -258,6 +268,30 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       barMaxWidth: 20,
       itemStyle: { color: '#7c3aed', borderRadius: [0, 5, 5, 0] },
       data: porServicioAgrupado.map((row) => Number(row.unidades || 0)),
+    }],
+  };
+
+  // Correctivo vs Mantenimiento Periodico: grafico "rosa" (variante de dona
+  // donde el radio tambien varia), para no repetir el mismo tipo de dona que
+  // ya usa "Estado actual".
+  const tipoOtOption = {
+    tooltip: {
+      trigger: 'item',
+      formatter: ({ name, value, percent }) => `${name}<br/>${number.format(value)} OT (${percent}%)`,
+    },
+    legend: { bottom: 0, type: 'scroll' },
+    series: [{
+      type: 'pie',
+      radius: ['20%', '75%'],
+      center: ['50%', '46%'],
+      roseType: 'radius',
+      itemStyle: { borderRadius: 6 },
+      label: { formatter: '{b}\n{d}%' },
+      data: porTipoOtAgrupado.map((row, index) => ({
+        name: row.tipo_ot,
+        value: Number(row.unidades || 0),
+        itemStyle: { color: TIPO_OT_COLORS[index % TIPO_OT_COLORS.length] },
+      })),
     }],
   };
 
@@ -506,6 +540,20 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
             )}
           </Panel>
         </div>
+
+        {/* Correctivo vs Mantenimiento Periódico */}
+        <Panel
+          title="Correctivo vs. Mantenimiento Periódico"
+          right={<span className="text-xs text-slate-500">Por tipo de OT</span>}
+        >
+          {porTipoOtAgrupado.length ? (
+            <div className="h-[320px] sm:h-[360px]">
+              <ReactECharts option={tipoOtOption} style={{ height: '100%' }} notMerge lazyUpdate />
+            </div>
+          ) : (
+            <div className="grid h-52 place-items-center text-sm text-slate-500">Sin datos.</div>
+          )}
+        </Panel>
 
         {/* 6. Vehículos de la flota + modelo que más viene */}
         <div className="grid gap-4 xl:grid-cols-[1.2fr_.8fr]">
