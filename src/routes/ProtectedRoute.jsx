@@ -19,5 +19,10 @@ export default function ProtectedRoute({ roles, children }) {
   if (roles && !roles.includes(usuario?.rol)) {
     return <Navigate to={APP_PATHS.facturacion} replace />;
   }
+  // Rol restringido: solo puede navegar dentro del modulo Empresas (lista y
+  // detalle de cada empresa). Cualquier otra ruta lo devuelve para alla.
+  if (usuario?.rol === 'EMPRESAS' && !location.pathname.startsWith(APP_PATHS.empresas)) {
+    return <Navigate to={APP_PATHS.empresas} replace />;
+  }
   return children;
 }

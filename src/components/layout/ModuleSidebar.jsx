@@ -15,6 +15,20 @@ function NavContent({ modules, activePath, collapsed, usuario, logout, onNavigat
       <nav className="flex-1 space-y-1">
         {modules.map(({ path, label, icon }) => {
           const Icon = icons[icon];
+          // Rol EMPRESAS: el link sigue en el menu (a proposito, para que se
+          // vea que existen otros modulos) pero no navega a ningun lado.
+          const disabled = usuario?.rol === 'EMPRESAS' && path !== APP_PATHS.empresas;
+          if (disabled) {
+            return (
+              <span
+                key={path}
+                title="No disponible para tu usuario"
+                className={`flex cursor-not-allowed items-center rounded-md px-3 py-2 text-sm font-semibold text-slate-300 ${collapsed ? 'justify-center' : 'gap-3'}`}
+              >
+                <Icon size={18} />{!collapsed && label}
+              </span>
+            );
+          }
           return (
           <a
             key={path}
@@ -32,7 +46,9 @@ function NavContent({ modules, activePath, collapsed, usuario, logout, onNavigat
         {!collapsed && usuario && (
           <div className="mb-2 px-2">
             <p className="truncate text-sm font-semibold text-slate-800" title={usuario.nombre}>{usuario.nombre}</p>
-            <p className="text-xs text-slate-500">{usuario.rol === 'ADMIN' ? 'Administrador' : 'Asesor'}</p>
+            <p className="text-xs text-slate-500">
+              {usuario.rol === 'ADMIN' ? 'Administrador' : usuario.rol === 'EMPRESAS' ? 'Cliente' : 'Asesor'}
+            </p>
           </div>
         )}
         <button
