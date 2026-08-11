@@ -7,7 +7,9 @@ import { number } from '../../utils/formatters';
 import { friendlyGrupo, grupoColor } from './empresasLabels';
 import EmpresaCard from './EmpresaCard';
 
-const EMPRESAS_POR_PAGINA = 12;
+const EMPRESAS_POR_PAGINA = 9;
+// Oculto temporalmente a pedido del usuario (se va a reutilizar mas adelante).
+const MOSTRAR_TIPO_CLIENTE = false;
 
 export default function EmpresasDashboard({ data, filters, error }) {
   const porTipoCliente = data?.porTipoCliente || [];
@@ -66,9 +68,6 @@ export default function EmpresasDashboard({ data, filters, error }) {
           <h1 className="mt-2 text-3xl font-black tracking-tight text-white">
             Empresas
           </h1>
-          <p className="mt-2 text-sm text-red-50">
-            Unidades atendidas y reprocesos / garantías internas por empresa.
-          </p>
         </div>
         <div className="rounded-lg bg-white p-2 text-slate-900 shadow-sm">
           <DashboardFilterBar {...filters} showMeta={false} />
@@ -116,7 +115,7 @@ export default function EmpresasDashboard({ data, filters, error }) {
         >
           {empresasPagina.length ? (
             <>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {empresasPagina.map((row) => (
                   <EmpresaCard key={`${row.grupo_cliente}-${row.empresa}`} row={row} />
                 ))}
@@ -155,17 +154,19 @@ export default function EmpresasDashboard({ data, filters, error }) {
           )}
         </Panel>
 
-        <Panel title="Unidades atendidas por tipo de cliente">
-          {porTipoCliente.length ? (
-            <div className="h-[300px] sm:h-[340px]">
-              <ReactECharts option={tipoClienteOption} style={{ height: '100%' }} notMerge lazyUpdate />
-            </div>
-          ) : (
-            <div className="grid h-60 place-items-center text-sm text-slate-500">
-              Sin datos para este periodo.
-            </div>
-          )}
-        </Panel>
+        {MOSTRAR_TIPO_CLIENTE && (
+          <Panel title="Unidades atendidas por tipo de cliente">
+            {porTipoCliente.length ? (
+              <div className="h-[300px] sm:h-[340px]">
+                <ReactECharts option={tipoClienteOption} style={{ height: '100%' }} notMerge lazyUpdate />
+              </div>
+            ) : (
+              <div className="grid h-60 place-items-center text-sm text-slate-500">
+                Sin datos para este periodo.
+              </div>
+            )}
+          </Panel>
+        )}
       </div>
     </div>
   );
