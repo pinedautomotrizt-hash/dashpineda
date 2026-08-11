@@ -395,7 +395,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           </p>
         </div>
         <div className="rounded-lg bg-white p-2 text-slate-900 shadow-sm">
-          <DashboardFilterBar {...filters} />
+          <DashboardFilterBar {...filters} showMeta={false} />
         </div>
       </header>
       {error && (
