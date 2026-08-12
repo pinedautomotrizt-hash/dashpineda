@@ -86,6 +86,20 @@ export default function FacturacionDashboard({ data, filters, error }) {
   const mismoMesPct = mixedGrandTotal.totalMixto
     ? (Number(summary.facturadoMismoMesSoles || 0) / mixedGrandTotal.totalMixto) * 100
     : 0;
+  // Cruza el total facturado por sede (mixedTotalsByLocal) con la parte que es
+  // "mismo mes" (mismoMesTotalsByLocal), para poder dibujar la barra de
+  // proporcion (mismo mes vs. arrastre) por cada sede.
+  const sedeBreakdownMismoMes = useMemo(() => {
+    return mixedTotalsByLocal.map((row) => {
+      const mismoMes = mismoMesTotalsByLocal.find((item) => item.local === row.local)?.total || 0;
+      return {
+        local: row.local,
+        total: row.totalMixto,
+        mismoMes,
+        pct: row.totalMixto ? (mismoMes / row.totalMixto) * 100 : 0,
+      };
+    });
+  }, [mixedTotalsByLocal, mismoMesTotalsByLocal]);
   const fiscalRowsByLocal = useMemo(() => {
     const grouped = new Map();
     (data?.porLocal || []).forEach((row) => {
@@ -337,31 +351,39 @@ export default function FacturacionDashboard({ data, filters, error }) {
         <Card label="Comprobantes" value={number.format(summary.comprobantesSoles || 0)} hint={`${number.format(summary.clientesSoles || 0)} clientes`} icon={ReceiptText} tone="violet" />
         <Card label="Ticket promedio" value={money(summary.ticket)} hint="Venta / comprobantes" icon={Gauge} tone="amber" />
       </section>
-      <section className="mb-4 rounded-lg border border-blue-100 bg-blue-50/40 p-4">
-        <div className="mb-3">
-          <h2 className="text-base font-semibold text-slate-950">Facturación de OT abiertas este mismo mes</h2>
-          <p className="text-xs text-slate-500">
-            Solo lo que se abrió y se facturó dentro del mes seleccionado — excluye OT abiertas en meses anteriores y facturadas recién ahora (arrastre).
-          </p>
+      <section className="mb-4 rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-white p-5 shadow-sm">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div className="max-w-xl">
+            <div className="flex items-center gap-2">
+              <div className="grid h-8 w-8 place-items-center rounded-md bg-blue-100 text-blue-700">
+                <Layers size={16} />
+              </div>
+              <h2 className="text-base font-semibold text-slate-950">Facturación de OT abiertas este mismo mes</h2>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              Solo lo que se abrió y se facturó dentro del mes seleccionado. La parte gris de cada barra es arrastre: OT abierta en un mes anterior y facturada recién ahora.
+            </p>
+          </div>
+          <div className="rounded-lg bg-white px-4 py-2 text-right shadow-sm">
+            <p className="text-xs text-slate-500">Total mismo mes</p>
+            <p className="text-xl font-black text-blue-700">{money(summary.facturadoMismoMesSoles)}</p>
+            <p className="text-xs font-semibold text-blue-600">{pct(mismoMesPct)} del total facturado</p>
+          </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {mismoMesTotalsByLocal.map((row) => (
-            <Card
-              key={row.local}
-              label={row.local}
-              value={money(row.total)}
-              hint="OT abierta y facturada en el mismo mes"
-              icon={Layers}
-              tone="blue"
-            />
+        <div className="space-y-4">
+          {sedeBreakdownMismoMes.map((row) => (
+            <div key={row.local}>
+              <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-sm">
+                <span className="font-semibold text-slate-800">{row.local}</span>
+                <span className="text-xs text-slate-500">
+                  {money(row.mismoMes)} de {money(row.total)} · {pct(row.pct)} mismo mes
+                </span>
+              </div>
+              <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-200">
+                <div className="h-full rounded-l-full bg-blue-600" style={{ width: `${row.pct}%` }} />
+              </div>
+            </div>
           ))}
-          <Card
-            label="Total (mismo mes)"
-            value={money(summary.facturadoMismoMesSoles)}
-            hint={`${pct(mismoMesPct)} del total facturado del mes`}
-            icon={Layers}
-            tone="blue"
-          />
         </div>
       </section>
       <section className="mb-4 grid gap-4 xl:grid-cols-3">

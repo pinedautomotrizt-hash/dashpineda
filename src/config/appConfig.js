@@ -13,7 +13,7 @@ export const APP_DEFAULTS = Object.freeze({
 // Meta mensual sugerida según la sede filtrada. Se aplica sola al cambiar el
 // filtro de Local, pero el campo se puede seguir editando a mano después.
 export const MONTHLY_GOALS_BY_LOCAL = Object.freeze({
-  'Pineda Callao': 400000,
+  'Pineda Callao': 418000,
   'Pineda Trujillo': 200000,
   Todos: 600000,
 });
