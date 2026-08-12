@@ -29,9 +29,7 @@ export default function AjustesPage() {
             <h2 className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-slate-950'}`}>
               Apariencia
             </h2>
-            <p className={`mt-1 text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              Cambia el fondo de tu pantalla de Asesor (y el menú) a negro, para verlo mejor con poca luz.
-            </p>
+            
 
             <div className={`mt-4 flex items-center justify-between rounded-lg border p-4 ${darkMode ? 'border-slate-800 bg-slate-950' : 'border-slate-100 bg-slate-50'}`}>
               <div className="flex items-center gap-3">
@@ -56,9 +54,6 @@ export default function AjustesPage() {
               </button>
             </div>
 
-            <p className={`mt-3 text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-              Se guarda en este navegador — la próxima vez que inicies sesión aquí, queda como lo dejaste.
-            </p>
           </section>
         </div>
       )}
