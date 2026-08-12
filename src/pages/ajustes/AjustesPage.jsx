@@ -20,9 +20,7 @@ export default function AjustesPage() {
             <h1 className="mt-2 text-3xl font-black tracking-tight text-white">
               Ajustes
             </h1>
-            <p className="mt-2 text-sm text-red-50">
-              Personaliza cómo ves tu módulo de Asesor.
-            </p>
+            
           </header>
 
           <section className={`rounded-lg border p-5 shadow-sm ${darkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'}`}>
