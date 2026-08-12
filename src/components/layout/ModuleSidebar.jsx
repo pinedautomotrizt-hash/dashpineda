@@ -15,9 +15,12 @@ function NavContent({ modules, activePath, collapsed, usuario, logout, onNavigat
       <nav className="flex-1 space-y-1">
         {modules.map(({ path, label, icon }) => {
           const Icon = icons[icon];
-          // Rol EMPRESAS: el link sigue en el menu (a proposito, para que se
-          // vea que existen otros modulos) pero no navega a ningun lado.
-          const disabled = usuario?.rol === 'EMPRESAS' && path !== APP_PATHS.empresas;
+          // Roles restringidos (EMPRESAS, ASESOR_INDIVIDUAL): el link sigue en
+          // el menu (a proposito, para que se vea que existen otros modulos)
+          // pero no navega a ningun lado.
+          const disabled =
+            (usuario?.rol === 'EMPRESAS' && path !== APP_PATHS.empresas) ||
+            (usuario?.rol === 'ASESOR_INDIVIDUAL' && path !== APP_PATHS.asesorPersonal);
           if (disabled) {
             return (
               <span
