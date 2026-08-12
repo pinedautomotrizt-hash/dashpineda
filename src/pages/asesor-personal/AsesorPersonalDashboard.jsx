@@ -142,7 +142,7 @@ export default function AsesorPersonalDashboard({ data, filters, error }) {
             </p>
           </div>
           <div className="rounded-lg bg-white p-2 text-slate-900 shadow-sm">
-            <DashboardFilterBar {...filters} showMeta={false} />
+            <DashboardFilterBar {...filters} />
           </div>
         </header>
 
