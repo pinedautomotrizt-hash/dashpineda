@@ -63,10 +63,10 @@ export default function EmpresasDashboard({ data, filters, error }) {
       <header className="mb-5 overflow-hidden rounded-xl bg-gradient-to-r from-red-950 via-red-800 to-red-600 p-5 text-white shadow-lg lg:flex lg:items-end lg:justify-between lg:gap-6">
         <div className="mb-4 lg:mb-0">
           <p className="text-xs font-bold uppercase tracking-[0.22em] text-red-100">
-            Calidad de servicio
+            Calidad de servicio  
           </p>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-white">
-            Empresas
+            Empresas 
           </h1>
         </div>
         <div className="rounded-lg bg-white p-2 text-slate-900 shadow-sm">
@@ -95,9 +95,9 @@ export default function EmpresasDashboard({ data, filters, error }) {
             hint="OT con reproceso o reclamo de garantía, cualquier cliente"
             icon={ShieldAlert}
             tone="rose"
-          />
+          /> 
         </section>
-
+          
         <Panel
           title="Empresas"
           right={

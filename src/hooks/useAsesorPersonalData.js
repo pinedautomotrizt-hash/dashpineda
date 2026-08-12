@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api';
 import { APP_DEFAULTS, monthlyGoalForLocal } from '../config/appConfig';
 
@@ -47,6 +47,20 @@ export default function useAsesorPersonalData() {
   }, [params]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Precarga la sede del asesor (ej. Trujillo) apenas se sabe cual es, para
+  // no arrancar siempre en "Todos". Se calcula sola en el backend segun donde
+  // trabaja de verdad cada asesor (sedePrincipal), asi que sirve igual el dia
+  // que se sumen asesoras de Callao, sin tocar este codigo. Solo se aplica
+  // una vez: si el usuario ya toco el selector a mano, se respeta su eleccion.
+  const sedeAutoAplicada = useRef(false);
+  useEffect(() => {
+    if (sedeAutoAplicada.current) return;
+    if (local !== 'Todos') { sedeAutoAplicada.current = true; return; }
+    if (!asesorData?.sedePrincipal) return;
+    sedeAutoAplicada.current = true;
+    setLocal(asesorData.sedePrincipal);
+  }, [asesorData, local, setLocal]);
 
   return {
     month, setMonth, local, setLocal, meta, setMeta, tipoCambio,
