@@ -212,7 +212,7 @@ export default function AsesorPersonalDashboard({ data, filters, error }) {
           {dolares && (
             <section className={`rounded-lg border p-3 text-sm ${darkMode ? 'border-emerald-900 bg-emerald-950 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
               También facturaste {moneyByCurrency(dolares.sin_igv, 'DOLARES')} en dólares este mes
-              ({number.format(dolares.comprobantes || 0)} comprobantes) — no se convierte ni se mezcla con soles.
+              ({number.format(dolares.comprobantes || 0)} comprobantes).
             </section>
           )}
 
