@@ -81,9 +81,15 @@ export function VariationBadge({ value, size = 'sm' }) {
     return <span className={`rounded-full bg-slate-100 text-slate-500 ${sizeClasses}`}>-</span>;
   }
   const positive = value >= 0;
+  const magnitude = Math.abs(value);
+  // Variaciones extremas (ej. +640% cuando el mes anterior fue casi cero) se
+  // topan a 100% con un "+" al final: se ve el cambio como grande de verdad,
+  // sin mostrar un numero que confunda mas de lo que informa.
+  const excede = magnitude > 100;
+  const texto = excede ? '100%+' : `${magnitude.toFixed(1)}%`;
   return (
     <span className={`rounded-full ${sizeClasses} ${positive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-      {positive ? '+' : ''}{value.toFixed(1)}%
+      {positive ? '+' : '-'}{texto}
     </span>
   );
 }
