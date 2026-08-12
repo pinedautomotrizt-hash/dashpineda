@@ -261,25 +261,18 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       trigger: 'item',
       formatter: (params) => `<strong>${params.name}</strong><br/>${number.format(params.value)} OT`,
     },
-    angleAxis: {
-      axisLine: { show: false },
-      axisTick: { show: false },
-      splitLine: { show: false },
-      axisLabel: { show: false },
-    },
-    radiusAxis: {
+    grid: { left: 150, right: 20, top: 10, bottom: 10 },
+    xAxis: { type: 'value', axisLabel: { color: '#64748b' }, splitLine: { lineStyle: { color: '#f1f5f9' } } },
+    yAxis: {
       type: 'category',
+      inverse: true,
       data: porServicioAgrupado.map((row) => row.grupo_servicio),
-      axisLine: { show: false },
-      axisTick: { show: false },
       axisLabel: { fontSize: 11, color: '#475569', width: 140, overflow: 'truncate' },
     },
-    polar: { radius: [30, '82%'], center: ['58%', '52%'] },
     series: [{
       type: 'bar',
-      coordinateSystem: 'polar',
-      roundCap: true,
-      itemStyle: { color: '#7c3aed' },
+      barMaxWidth: 18,
+      itemStyle: { color: '#7c3aed', borderRadius: [0, 4, 4, 0] },
       data: porServicioAgrupado.map((row) => Number(row.unidades || 0)),
     }],
   };
@@ -405,13 +398,16 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
             {categoria || 'Cliente'}
           </p>
           {/* Titulo generico a pedido del usuario: el nombre real de la empresa
-              se muestra abajo, no como titulo grande. */}
+              se muestra abajo, no como titulo grande. Para Rentaequipos, a pedido
+              especifico del usuario, se oculta tambien el nombre de abajo. */}
           <h1 className="mt-2 text-3xl font-black tracking-tight text-white">
             Dashboard General
           </h1>
-          <p className="mt-2 truncate text-sm text-red-50" title={nombreEmpresa}>
-            {nombreEmpresa}
-          </p>
+          {nombreEmpresa?.trim().toUpperCase() !== 'RENTAEQUIPOS LEASING PERU S.A.' && (
+            <p className="mt-2 truncate text-sm text-red-50" title={nombreEmpresa}>
+              {nombreEmpresa}
+            </p>
+          )}
         </div>
         <div className="rounded-lg bg-white p-2 text-slate-900 shadow-sm">
           <DashboardFilterBar {...filters} showMeta={false} />
