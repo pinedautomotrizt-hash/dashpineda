@@ -52,7 +52,7 @@ export default function AjustesPage() {
                 onClick={toggleDarkMode}
                 className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${darkMode ? 'bg-red-700' : 'bg-slate-300'}`}
               >
-                <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${darkMode ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                <span className={`absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${darkMode ? 'translate-x-5' : 'translate-x-0'}`} />
               </button>
             </div>
 
