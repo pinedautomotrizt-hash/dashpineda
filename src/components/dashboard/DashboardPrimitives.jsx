@@ -78,7 +78,7 @@ export function LoadingOverlay({ show, label = 'Cargando datos...', dark = false
 export function VariationBadge({ value, size = 'sm' }) {
   const sizeClasses = size === 'lg' ? 'px-4 py-1.5 text-xl font-black' : 'px-2 py-1 text-xs font-semibold';
   if (value === null || value === undefined || Number.isNaN(value)) {
-    return <span className={`rounded-full bg-slate-100 text-slate-500 ${sizeClasses}`}>Sin dato previo</span>;
+    return <span className={`rounded-full bg-slate-100 text-slate-500 ${sizeClasses}`}>-</span>;
   }
   const positive = value >= 0;
   return (
