@@ -253,20 +253,33 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
     }],
   };
 
+  // Barras polares (radiales) en vez de barras horizontales: ya hay varias
+  // barras Cartesianas en esta pagina, esto se ve como un tipo de grafico
+  // distinto aunque tecnicamente siga siendo "bar" por dentro.
   const servicioOption = {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => number.format(value) },
-    grid: { left: 190, right: 25, top: 15, bottom: 25 },
-    xAxis: { type: 'value', axisLabel: { formatter: (value) => number.format(value) } },
-    yAxis: {
-      type: 'category',
-      inverse: true,
-      data: porServicioAgrupado.map((row) => row.grupo_servicio),
-      axisLabel: { width: 170, overflow: 'truncate' },
+    tooltip: {
+      trigger: 'item',
+      formatter: (params) => `<strong>${params.name}</strong><br/>${number.format(params.value)} OT`,
     },
+    angleAxis: {
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { show: false },
+      axisLabel: { show: false },
+    },
+    radiusAxis: {
+      type: 'category',
+      data: porServicioAgrupado.map((row) => row.grupo_servicio),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { fontSize: 11, color: '#475569', width: 140, overflow: 'truncate' },
+    },
+    polar: { radius: [30, '82%'], center: ['58%', '52%'] },
     series: [{
       type: 'bar',
-      barMaxWidth: 20,
-      itemStyle: { color: '#7c3aed', borderRadius: [0, 5, 5, 0] },
+      coordinateSystem: 'polar',
+      roundCap: true,
+      itemStyle: { color: '#7c3aed' },
       data: porServicioAgrupado.map((row) => Number(row.unidades || 0)),
     }],
   };
@@ -391,11 +404,13 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           <p className="text-xs font-bold uppercase tracking-[0.22em] text-red-100">
             {categoria || 'Cliente'}
           </p>
-          <h1 className="mt-2 truncate text-3xl font-black tracking-tight text-white" title={nombreEmpresa}>
-            {nombreEmpresa}
+          {/* Titulo generico a pedido del usuario: el nombre real de la empresa
+              se muestra abajo, no como titulo grande. */}
+          <h1 className="mt-2 text-3xl font-black tracking-tight text-white">
+            Dashboard General
           </h1>
-          <p className="mt-2 text-sm text-red-50">
-            Reporte de calidad y actividad del cliente.
+          <p className="mt-2 truncate text-sm text-red-50" title={nombreEmpresa}>
+            {nombreEmpresa}
           </p>
         </div>
         <div className="rounded-lg bg-white p-2 text-slate-900 shadow-sm">
