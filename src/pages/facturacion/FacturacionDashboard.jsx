@@ -6,6 +6,7 @@ import {
   Download,
   Gauge,
   Goal,
+  Layers,
   ReceiptText,
   TrendingUp,
 } from 'lucide-react';
@@ -69,6 +70,22 @@ export default function FacturacionDashboard({ data, filters, error }) {
     }),
     { soles: 0, dolares: 0, totalMixto: 0 },
   );
+  // Mismo cruce que mixedTotalsByLocal, pero solo con la parte del total que
+  // corresponde a OT abiertas dentro de este mismo mes (no arrastre de OT
+  // abiertas en meses anteriores y facturadas recien ahora).
+  const mismoMesTotalsByLocal = useMemo(() => {
+    const grouped = new Map();
+    (data?.porLocalMismoMes || []).forEach((row) => {
+      const localName = row.nombre || 'Sin local';
+      const current = grouped.get(localName) || { local: localName, total: 0 };
+      current.total += Number(row.sin_igv || 0);
+      grouped.set(localName, current);
+    });
+    return [...grouped.values()].sort((a, b) => b.total - a.total);
+  }, [data]);
+  const mismoMesPct = mixedGrandTotal.totalMixto
+    ? (Number(summary.facturadoMismoMesSoles || 0) / mixedGrandTotal.totalMixto) * 100
+    : 0;
   const fiscalRowsByLocal = useMemo(() => {
     const grouped = new Map();
     (data?.porLocal || []).forEach((row) => {
@@ -319,6 +336,33 @@ export default function FacturacionDashboard({ data, filters, error }) {
         <Card label="Brecha" value={money(summary.brecha)} hint={summary.brecha >= 0 ? 'Meta superada' : 'Falta para la meta'} icon={CalendarDays} tone={summary.brecha >= 0 ? 'green' : 'rose'} />
         <Card label="Comprobantes" value={number.format(summary.comprobantesSoles || 0)} hint={`${number.format(summary.clientesSoles || 0)} clientes`} icon={ReceiptText} tone="violet" />
         <Card label="Ticket promedio" value={money(summary.ticket)} hint="Venta / comprobantes" icon={Gauge} tone="amber" />
+      </section>
+      <section className="mb-4 rounded-lg border border-blue-100 bg-blue-50/40 p-4">
+        <div className="mb-3">
+          <h2 className="text-base font-semibold text-slate-950">Facturación de OT abiertas este mismo mes</h2>
+          <p className="text-xs text-slate-500">
+            Solo lo que se abrió y se facturó dentro del mes seleccionado — excluye OT abiertas en meses anteriores y facturadas recién ahora (arrastre).
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {mismoMesTotalsByLocal.map((row) => (
+            <Card
+              key={row.local}
+              label={row.local}
+              value={money(row.total)}
+              hint="OT abierta y facturada en el mismo mes"
+              icon={Layers}
+              tone="blue"
+            />
+          ))}
+          <Card
+            label="Total (mismo mes)"
+            value={money(summary.facturadoMismoMesSoles)}
+            hint={`${pct(mismoMesPct)} del total facturado del mes`}
+            icon={Layers}
+            tone="blue"
+          />
+        </div>
       </section>
       <section className="mb-4 grid gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
