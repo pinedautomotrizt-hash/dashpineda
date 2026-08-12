@@ -33,6 +33,7 @@ export const APP_PATHS = Object.freeze({
   empresas: '/empresas',
   empresaDetalle: '/empresas/:empresa',
   asesorPersonal: '/asesor-personal',
+  ajustes: '/ajustes',
 });
 
 // La ruta de detalle usa el nombre de la empresa como clave (no hay id numerico).
@@ -50,6 +51,7 @@ export const APP_MODULES = Object.freeze([
   { id: 'importaciones', path: APP_PATHS.importaciones, label: 'Importaciones', icon: 'upload', roles: ['ADMIN'] },
   { id: 'reportes', path: APP_PATHS.reportes, label: 'Reportes Excel', icon: 'download' },
   { id: 'asesor-personal', path: APP_PATHS.asesorPersonal, label: 'Asesor', icon: 'users', roles: ['ASESOR_INDIVIDUAL'] },
+  { id: 'ajustes', path: APP_PATHS.ajustes, label: 'Ajustes', icon: 'settings', roles: ['ASESOR_INDIVIDUAL'] },
 ]);
 
 export const MONTH_NAMES = Object.freeze([

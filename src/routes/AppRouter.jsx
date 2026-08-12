@@ -7,35 +7,40 @@ import AsesoresPage from '../pages/asesores/AsesoresPage';
 import EmpresasPage from '../pages/empresas/EmpresasPage';
 import EmpresaDetallePage from '../pages/empresas/EmpresaDetallePage';
 import AsesorPersonalPage from '../pages/asesor-personal/AsesorPersonalPage';
+import AjustesPage from '../pages/ajustes/AjustesPage';
 import ImportacionesPage from '../pages/importaciones/ImportacionesPage';
 import ReportesPage from '../pages/reportes/ReportesPage';
 import LoginPage from '../pages/login/LoginPage';
 import ProtectedRoute from './ProtectedRoute';
 import { AuthProvider } from '../context/AuthContext';
+import { ThemeProvider } from '../context/ThemeContext';
 import { APP_PATHS } from '../config/appConfig';
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path={APP_PATHS.login} element={<LoginPage />} />
-          <Route path={APP_PATHS.facturacion} element={<ProtectedRoute><FacturacionPage /></ProtectedRoute>} />
-          <Route path={APP_PATHS.resumenMensual} element={<ProtectedRoute><ResumenMensualPage /></ProtectedRoute>} />
-          <Route path={APP_PATHS.dashboard} element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-          <Route path={APP_PATHS.asesores} element={<ProtectedRoute><AsesoresPage /></ProtectedRoute>} />
-          <Route path={APP_PATHS.empresas} element={<ProtectedRoute><EmpresasPage /></ProtectedRoute>} />
-          <Route path={APP_PATHS.empresaDetalle} element={<ProtectedRoute><EmpresaDetallePage /></ProtectedRoute>} />
-          <Route path={APP_PATHS.asesorPersonal} element={<ProtectedRoute><AsesorPersonalPage /></ProtectedRoute>} />
-          <Route
-            path={APP_PATHS.importaciones}
-            element={<ProtectedRoute roles={['ADMIN']}><ImportacionesPage /></ProtectedRoute>}
-          />
-          <Route path={APP_PATHS.reportes} element={<ProtectedRoute><ReportesPage /></ProtectedRoute>} />
-          <Route path="/" element={<Navigate to={APP_PATHS.facturacion} replace />} />
-          <Route path="*" element={<Navigate to={APP_PATHS.facturacion} replace />} />
-        </Routes>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <Routes>
+            <Route path={APP_PATHS.login} element={<LoginPage />} />
+            <Route path={APP_PATHS.facturacion} element={<ProtectedRoute><FacturacionPage /></ProtectedRoute>} />
+            <Route path={APP_PATHS.resumenMensual} element={<ProtectedRoute><ResumenMensualPage /></ProtectedRoute>} />
+            <Route path={APP_PATHS.dashboard} element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+            <Route path={APP_PATHS.asesores} element={<ProtectedRoute><AsesoresPage /></ProtectedRoute>} />
+            <Route path={APP_PATHS.empresas} element={<ProtectedRoute><EmpresasPage /></ProtectedRoute>} />
+            <Route path={APP_PATHS.empresaDetalle} element={<ProtectedRoute><EmpresaDetallePage /></ProtectedRoute>} />
+            <Route path={APP_PATHS.asesorPersonal} element={<ProtectedRoute><AsesorPersonalPage /></ProtectedRoute>} />
+            <Route path={APP_PATHS.ajustes} element={<ProtectedRoute><AjustesPage /></ProtectedRoute>} />
+            <Route
+              path={APP_PATHS.importaciones}
+              element={<ProtectedRoute roles={['ADMIN']}><ImportacionesPage /></ProtectedRoute>}
+            />
+            <Route path={APP_PATHS.reportes} element={<ProtectedRoute><ReportesPage /></ProtectedRoute>} />
+            <Route path="/" element={<Navigate to={APP_PATHS.facturacion} replace />} />
+            <Route path="*" element={<Navigate to={APP_PATHS.facturacion} replace />} />
+          </Routes>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

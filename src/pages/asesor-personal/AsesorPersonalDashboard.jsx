@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { ActivitySquare, Banknote, Clock3, Gauge, Moon, ReceiptText, Settings, Sun, TrendingUp } from 'lucide-react';
+import { ActivitySquare, Banknote, Clock3, Gauge, ReceiptText, TrendingUp } from 'lucide-react';
 import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
 import { Card, Panel, LoadingOverlay, VariationBadge } from '../../components/dashboard/DashboardPrimitives';
 import { money, moneyByCurrency, number, shortDate } from '../../utils/formatters';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { friendlyEstado, estadoColor } from '../empresas/empresasLabels';
 
 // Colores para la composicion del trabajo: se asignan por posicion (mas
@@ -18,19 +19,9 @@ const TIPO_OT_COLORS = ['#7c3aed', '#0ea5e9', '#f59e0b', '#10b981', '#ef4444', '
 const DONUT_RADIUS = ['36%', '62%'];
 const DONUT_CENTER = ['50%', '42%'];
 
-const DARK_MODE_KEY = 'pineda_asesor_personal_dark';
-
 export default function AsesorPersonalDashboard({ data, filters, error }) {
   const { usuario } = useAuth();
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem(DARK_MODE_KEY) === '1');
-
-  const toggleDarkMode = () => {
-    setDarkMode((prev) => {
-      const next = !prev;
-      localStorage.setItem(DARK_MODE_KEY, next ? '1' : '0');
-      return next;
-    });
-  };
+  const { darkMode } = useTheme();
 
   const resumen = data?.resumen || {};
   const porMoneda = data?.porMoneda || [];
@@ -155,22 +146,6 @@ export default function AsesorPersonalDashboard({ data, filters, error }) {
           </div>
         </header>
 
-        <section className={`mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm shadow-sm ${darkMode ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-slate-200 bg-white text-slate-600'}`}>
-          <div className="flex items-center gap-2">
-            <Settings size={16} className={darkMode ? 'text-slate-400' : 'text-slate-500'} />
-            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Ajustes</span>
-            <span className={darkMode ? 'text-slate-500' : 'text-slate-400'}>Modo oscuro para esta pantalla</span>
-          </div>
-          <button
-            type="button"
-            onClick={toggleDarkMode}
-            className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${darkMode ? 'border-slate-700 bg-slate-800 text-amber-300' : 'border-slate-200 bg-slate-50 text-slate-600'}`}
-          >
-            {darkMode ? <Sun size={14} /> : <Moon size={14} />}
-            {darkMode ? 'Modo claro' : 'Modo oscuro'}
-          </button>
-        </section>
-
         {error && (
           <div className={`mb-4 rounded-lg border p-3 text-sm ${darkMode ? 'border-rose-900 bg-rose-950 text-rose-300' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
             {error}
@@ -214,8 +189,12 @@ export default function AsesorPersonalDashboard({ data, filters, error }) {
             />
             <Card
               label="Variación vs. mes anterior"
-              value={<VariationBadge value={resumen.variacionPct} />}
-              hint={`Mes pasado: ${money(resumen.sinIgvMesAnterior)}`}
+              value={<VariationBadge value={resumen.variacionPct} size="lg" />}
+              hint={
+                <span className={`text-sm font-semibold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Mes pasado: {money(resumen.sinIgvMesAnterior)}
+                </span>
+              }
               icon={ActivitySquare}
               tone={resumen.variacionPct >= 0 ? 'green' : 'rose'}
               dark={darkMode}

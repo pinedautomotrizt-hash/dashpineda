@@ -73,13 +73,16 @@ export function LoadingOverlay({ show, label = 'Cargando datos...', dark = false
 
 
 //Varicion de Colores Gerson -----------
-export function VariationBadge({ value }) {
+// size 'lg': para cuando la variacion es el dato principal de una tarjeta
+// (no un detalle chico al lado de otro numero), como en el modulo Asesor.
+export function VariationBadge({ value, size = 'sm' }) {
+  const sizeClasses = size === 'lg' ? 'px-4 py-1.5 text-xl font-black' : 'px-2 py-1 text-xs font-semibold';
   if (value === null || value === undefined || Number.isNaN(value)) {
-    return <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500">Sin dato previo</span>;
+    return <span className={`rounded-full bg-slate-100 text-slate-500 ${sizeClasses}`}>Sin dato previo</span>;
   }
   const positive = value >= 0;
   return (
-    <span className={`rounded-full px-2 py-1 text-xs font-semibold ${positive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+    <span className={`rounded-full ${sizeClasses} ${positive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
       {positive ? '+' : ''}{value.toFixed(1)}%
     </span>
   );

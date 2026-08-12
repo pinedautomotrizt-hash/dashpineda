@@ -24,8 +24,13 @@ export default function ProtectedRoute({ roles, children }) {
   if (usuario?.rol === 'EMPRESAS' && !location.pathname.startsWith(APP_PATHS.empresas)) {
     return <Navigate to={APP_PATHS.empresas} replace />;
   }
-  // Mismo criterio para ASESOR_INDIVIDUAL: solo su propio modulo Asesor.
-  if (usuario?.rol === 'ASESOR_INDIVIDUAL' && !location.pathname.startsWith(APP_PATHS.asesorPersonal)) {
+  // Mismo criterio para ASESOR_INDIVIDUAL: solo su propio modulo Asesor y la
+  // pagina de Ajustes (donde vive el toggle de modo oscuro).
+  if (
+    usuario?.rol === 'ASESOR_INDIVIDUAL'
+    && !location.pathname.startsWith(APP_PATHS.asesorPersonal)
+    && !location.pathname.startsWith(APP_PATHS.ajustes)
+  ) {
     return <Navigate to={APP_PATHS.asesorPersonal} replace />;
   }
   return children;
