@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { ActivitySquare, Banknote, Clock3, Gauge, ReceiptText, TrendingUp } from 'lucide-react';
+import { ActivitySquare, Banknote, Clock3, Gauge, Layers, ReceiptText, TrendingUp } from 'lucide-react';
 import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
 import { Card, Panel, LoadingOverlay, VariationBadge } from '../../components/dashboard/DashboardPrimitives';
-import { money, moneyByCurrency, number, shortDate } from '../../utils/formatters';
+import { money, moneyByCurrency, number, pct, shortDate } from '../../utils/formatters';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { friendlyEstado, estadoColor } from '../empresas/empresasLabels';
@@ -67,6 +67,38 @@ export default function AsesorPersonalDashboard({ data, filters, error }) {
       }),
     }],
   }), [diasSoles, porDia, axisColor, splitLineColor, tooltipStyle]);
+
+  // Barras diarias: total facturado (gris) vs. la parte que es OT abierta
+  // este mismo mes (azul), para ver de un vistazo cuanto de cada dia es
+  // trabajo "nuevo" del mes y cuanto es arrastre.
+  const porDiaMismoMes = data?.porDiaMismoMes || [];
+  const mismoMesOption = useMemo(() => ({
+    tooltip: { trigger: 'axis', valueFormatter: (value) => money(value), ...tooltipStyle },
+    legend: { bottom: 0, textStyle: { fontSize: 11, color: legendTextColor } },
+    grid: { left: 60, right: 20, top: 20, bottom: 50 },
+    xAxis: { type: 'category', data: diasSoles.map(shortDate), axisLabel: { color: axisColor }, axisLine: { lineStyle: { color: splitLineColor } } },
+    yAxis: {
+      type: 'value',
+      axisLabel: { formatter: (value) => `${Math.round(value / 1000)}k`, color: axisColor },
+      splitLine: { lineStyle: { color: splitLineColor } },
+    },
+    series: [
+      {
+        name: 'Total facturado',
+        type: 'bar',
+        barMaxWidth: 16,
+        itemStyle: { color: darkMode ? '#334155' : '#cbd5e1' },
+        data: diasSoles.map((fecha) => Number(porDia.find((row) => row.fecha === fecha && row.moneda === 'SOLES')?.sin_igv || 0)),
+      },
+      {
+        name: 'Mismo mes (sin arrastre)',
+        type: 'bar',
+        barMaxWidth: 16,
+        itemStyle: { color: '#2563eb' },
+        data: diasSoles.map((fecha) => Number(porDiaMismoMes.find((row) => row.fecha === fecha && row.moneda === 'SOLES')?.sin_igv || 0)),
+      },
+    ],
+  }), [diasSoles, porDia, porDiaMismoMes, axisColor, splitLineColor, legendTextColor, darkMode, tooltipStyle]);
 
   const tipoOtSoles = useMemo(
     () => porTipoOt.filter((row) => row.moneda === 'SOLES').sort((a, b) => Number(b.sin_igv) - Number(a.sin_igv)),
@@ -207,6 +239,14 @@ export default function AsesorPersonalDashboard({ data, filters, error }) {
               tone="rose"
               dark={darkMode}
             />
+            <Card
+              label="Facturado del mes (sin arrastre)"
+              value={money(resumen.facturadoMismoMesSoles)}
+              hint={`${pct(resumen.mismoMesPct)} del total · solo OT abierta y facturada este mes`}
+              icon={Layers}
+              tone="blue"
+              dark={darkMode}
+            />
           </section>
 
           {dolares && (
@@ -224,6 +264,22 @@ export default function AsesorPersonalDashboard({ data, filters, error }) {
             {diasSoles.length ? (
               <div className="h-[280px]">
                 <ReactECharts option={diarioOption} style={{ height: '100%' }} notMerge lazyUpdate />
+              </div>
+            ) : (
+              <div className={`grid h-60 place-items-center text-sm ${darkMode ? 'text-slate-500' : 'text-slate-500'}`}>
+                Sin facturación registrada este mes todavía.
+              </div>
+            )}
+          </Panel>
+
+          <Panel
+            title="Facturado del mes, sin arrastre"
+            right={<span className={`text-xs ${darkMode ? 'text-slate-500' : 'text-slate-500'}`}>Solo OT abierta y facturada este mes</span>}
+            dark={darkMode}
+          >
+            {diasSoles.length ? (
+              <div className="h-[280px]">
+                <ReactECharts option={mismoMesOption} style={{ height: '100%' }} notMerge lazyUpdate />
               </div>
             ) : (
               <div className={`grid h-60 place-items-center text-sm ${darkMode ? 'text-slate-500' : 'text-slate-500'}`}>
