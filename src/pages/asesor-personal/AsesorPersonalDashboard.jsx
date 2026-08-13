@@ -3,7 +3,7 @@ import ReactECharts from 'echarts-for-react';
 import { ActivitySquare, Banknote, Clock3, Gauge, Layers, ReceiptText, TrendingUp } from 'lucide-react';
 import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
 import { Card, Panel, LoadingOverlay, VariationBadge } from '../../components/dashboard/DashboardPrimitives';
-import { money, moneyByCurrency, number, pct, shortDate } from '../../utils/formatters';
+import { number, pct, shortDate } from '../../utils/formatters';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { friendlyEstado, estadoColor } from '../empresas/empresasLabels';
@@ -12,6 +12,16 @@ import { friendlyEstado, estadoColor } from '../empresas/empresasLabels';
 // facturado primero), no por nombre fijo, porque tipo_ot es texto libre y
 // puede variar (Mantenimiento, Correctivo, Carroceria y Pintura, etc.).
 const TIPO_OT_COLORS = ['#7c3aed', '#0ea5e9', '#f59e0b', '#10b981', '#ef4444', '#64748b'];
+
+// Este modulo muestra los montos exactos (con centavos), sin redondear a
+// soles enteros como el formatter "money" compartido del resto del sistema —
+// para que cuadre con lo que ya se ve en Resumen mensual.
+const penExact = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const usdExact = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money = (value) => penExact.format(Number(value || 0));
+const moneyByCurrency = (value, currencyName) => (
+  String(currencyName || '').toUpperCase() === 'DOLARES' ? usdExact.format(Number(value || 0)) : money(value)
+);
 
 // Radio/centro compartidos por ambas donas: mas angostos que antes y con el
 // centro corrido hacia arriba, para que las etiquetas y la leyenda tengan
