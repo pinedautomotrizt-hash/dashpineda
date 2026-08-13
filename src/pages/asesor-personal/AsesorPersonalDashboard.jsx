@@ -91,7 +91,7 @@ export default function AsesorPersonalDashboard({ data, filters, error }) {
         data: diasSoles.map((fecha) => Number(porDia.find((row) => row.fecha === fecha && row.moneda === 'SOLES')?.sin_igv || 0)),
       },
       {
-        name: 'Mismo mes (sin arrastre)',
+        name: 'Mismo mes',
         type: 'bar',
         barMaxWidth: 16,
         itemStyle: { color: '#2563eb' },
@@ -273,7 +273,7 @@ export default function AsesorPersonalDashboard({ data, filters, error }) {
           </Panel>
 
           <Panel
-            title="Facturado del mes, sin arrastre"
+            title="Facturado del mes"
             right={<span className={`text-xs ${darkMode ? 'text-slate-500' : 'text-slate-500'}`}>Solo OT abierta y facturada este mes</span>}
             dark={darkMode}
           >
