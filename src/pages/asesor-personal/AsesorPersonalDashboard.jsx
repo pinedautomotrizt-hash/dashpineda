@@ -240,7 +240,7 @@ export default function AsesorPersonalDashboard({ data, filters, error }) {
               dark={darkMode}
             />
             <Card
-              label="Facturado del mes (sin arrastre)"
+              label="Facturado del mes actual"
               value={money(resumen.facturadoMismoMesSoles)}
               hint={`${pct(resumen.mismoMesPct)} del total · solo OT abierta y facturada este mes`}
               icon={Layers}
