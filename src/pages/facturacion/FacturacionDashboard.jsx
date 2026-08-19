@@ -191,6 +191,27 @@ export default function FacturacionDashboard({ data, filters, error }) {
     }],
   };
 
+  // Quien registra/emite cada comprobante (columna "Asesor" del Registro de
+  // Venta, distinta de "Asesor Operación"): suele ser la persona encargada de
+  // facturar por sede, no quien atendio el vehiculo.
+  const emisorRows = data?.porEmisor || [];
+  const emisorOption = {
+    tooltip: {
+      trigger: 'item',
+      formatter: ({ name, value, percent }) => `${name}<br/>${number.format(value)} comprobante(s) (${percent}%)`,
+    },
+    legend: { bottom: 0, type: 'scroll' },
+    series: [{
+      type: 'pie',
+      radius: ['45%', '70%'],
+      label: { formatter: '{b}\n{d}%' },
+      data: emisorRows.map((row) => ({
+        name: `${row.asesor} (${row.local_nombre})`,
+        value: Number(row.comprobantes || 0),
+      })),
+    }],
+  };
+
   const advisorOption = {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => money(value) },
     grid: { left: 180, right: 25, top: 15, bottom: 25 },
@@ -451,6 +472,22 @@ export default function FacturacionDashboard({ data, filters, error }) {
           <div className="h-[220px] sm:h-[260px] lg:h-[300px]">
             <ReactECharts option={ticketLocalOption} style={{ height: '100%' }} notMerge lazyUpdate />
           </div>
+        </Panel>
+      </section>
+      <section className="mb-4">
+        <Panel
+          title="Quién está facturando por sede"
+          right={<span className="text-xs text-slate-500">Columna "Asesor" del Registro de Venta</span>}
+        >
+          {emisorRows.length ? (
+            <div className="h-[260px] sm:h-[320px] lg:h-[360px]">
+              <ReactECharts option={emisorOption} style={{ height: '100%' }} notMerge lazyUpdate />
+            </div>
+          ) : (
+            <div className="grid h-60 place-items-center text-sm text-slate-500">
+              Sin comprobantes para este periodo.
+            </div>
+          )}
         </Panel>
       </section>
       </div>
