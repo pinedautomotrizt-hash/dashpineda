@@ -255,22 +255,53 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   };
 
   // Vehiculos distintos por dia, dentro del mes/sede ya filtrados — drill-down
-  // diario de "Evolución mensual · Vehículos únicos" de arriba, que solo
-  // muestra el total del mes.
+  // diario de "Evolución mensual · Vehículos únicos" de arriba. Calendario de
+  // calor en vez de otra barra mas (ya hay varios graficos de barras en esta
+  // pagina): de un vistazo se ven los dias fuertes/flojos del mes, formato
+  // mas cómodo para una presentación ejecutiva.
+  const maxPorDia = Math.max(1, ...porDia.map((row) => row.placas));
   const porDiaOption = {
     tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      valueFormatter: (value) => `${number.format(value)} vehículos`,
+      formatter: (params) => {
+        const [fecha, valor] = params.value;
+        const [, , dia] = fecha.split('-');
+        return `<strong>${dia}/${filters.month.slice(5)}</strong><br/>${number.format(valor)} vehículo${valor === 1 ? '' : 's'}`;
+      },
     },
-    grid: { left: 45, right: 20, top: 15, bottom: 25 },
-    xAxis: { type: 'category', data: porDia.map((row) => String(row.dia).padStart(2, '0')) },
-    yAxis: { type: 'value', minInterval: 1 },
+    visualMap: {
+      min: 0,
+      max: maxPorDia,
+      calculable: false,
+      orient: 'horizontal',
+      left: 'center',
+      top: 0,
+      itemWidth: 12,
+      itemHeight: 90,
+      inRange: { color: ['#e0f2fe', '#0891b2'] },
+      textStyle: { color: '#64748b', fontSize: 11 },
+    },
+    calendar: {
+      top: 55,
+      left: 30,
+      right: 20,
+      cellSize: ['auto', 26],
+      range: filters.month,
+      dayLabel: { nameMap: ['D', 'L', 'M', 'X', 'J', 'V', 'S'], color: '#94a3b8', fontSize: 11 },
+      monthLabel: { show: false },
+      yearLabel: { show: false },
+      itemStyle: { borderWidth: 3, borderColor: '#fff' },
+      splitLine: { show: false },
+    },
     series: [{
-      type: 'bar',
-      barMaxWidth: 22,
-      itemStyle: { color: '#0891b2', borderRadius: [4, 4, 0, 0] },
-      data: porDia.map((row) => row.placas),
+      type: 'heatmap',
+      coordinateSystem: 'calendar',
+      data: porDia.map((row) => [`${filters.month}-${String(row.dia).padStart(2, '0')}`, row.placas]),
+      label: {
+        show: true,
+        formatter: (params) => params.value[0].split('-')[2],
+        color: (params) => (params.value[1] > maxPorDia / 2 ? '#ffffff' : '#0f172a'),
+        fontSize: 11,
+      },
     }],
   };
 
@@ -575,7 +606,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           right={<span className="text-xs text-slate-500">Placas distintas por día, mes filtrado</span>}
         >
           {porDia.length ? (
-            <div className="h-[260px]">
+            <div className="h-[230px]">
               <ReactECharts option={porDiaOption} style={{ height: '100%' }} notMerge lazyUpdate />
             </div>
           ) : (
