@@ -277,7 +277,10 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       top: 0,
       itemWidth: 12,
       itemHeight: 90,
-      inRange: { color: ['#e0f2fe', '#0891b2'] },
+      // Escala de varios colores (no un solo tono): el 0 ya arranca en un gris
+      // visible (no blanco puro) para que un día sin ingresos se vea como una
+      // celda con color, no como un hueco vacío.
+      inRange: { color: ['#e2e8f0', '#38bdf8', '#22c55e', '#facc15', '#f97316', '#dc2626'] },
       textStyle: { color: '#64748b', fontSize: 11 },
     },
     calendar: {
@@ -299,7 +302,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       label: {
         show: true,
         formatter: (params) => params.value[0].split('-')[2],
-        color: (params) => (params.value[1] > maxPorDia / 2 ? '#ffffff' : '#0f172a'),
+        color: (params) => (params.value[1] > maxPorDia * 0.65 ? '#ffffff' : '#0f172a'),
         fontSize: 11,
       },
     }],
