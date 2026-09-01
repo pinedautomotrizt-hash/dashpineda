@@ -162,6 +162,8 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   const porSede = data?.porSede || [];
   const reprocesosDetalle = data?.reprocesosDetalle || [];
   const repuestosMasUsados = data?.repuestosMasUsados || [];
+  const repuestosCorrectivos = data?.repuestosCorrectivos || [];
+  const porDia = data?.porDia || [];
 
   const categoria = resumen.grupo_cliente ? friendlyGrupo(resumen.grupo_cliente) : null;
 
@@ -250,6 +252,26 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
         itemStyle: { color: '#7c3aed', borderRadius: [4, 4, 0, 0] },
       },
     ],
+  };
+
+  // Vehiculos distintos por dia, dentro del mes/sede ya filtrados — drill-down
+  // diario de "Evolución mensual · Vehículos únicos" de arriba, que solo
+  // muestra el total del mes.
+  const porDiaOption = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      valueFormatter: (value) => `${number.format(value)} vehículos`,
+    },
+    grid: { left: 45, right: 20, top: 15, bottom: 25 },
+    xAxis: { type: 'category', data: porDia.map((row) => String(row.dia).padStart(2, '0')) },
+    yAxis: { type: 'value', minInterval: 1 },
+    series: [{
+      type: 'bar',
+      barMaxWidth: 22,
+      itemStyle: { color: '#0891b2', borderRadius: [4, 4, 0, 0] },
+      data: porDia.map((row) => row.placas),
+    }],
   };
 
   const estadoOption = {
@@ -404,6 +426,37 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
     }],
   };
 
+  // Mismo grafico que repuestosOption, pero solo con lineas de OT tipo
+  // Correctivo: al ser menos comunes, verlas aparte evita que el volumen de
+  // aceite/filtros de mantenimiento rutinario tape lo que realmente se les
+  // rompe a estos clientes.
+  const repuestosCorrectivosOption = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (items) => {
+        const item = items[0];
+        const row = repuestosCorrectivos[item.dataIndex];
+        if (!row) return '';
+        return `<strong>${row.repuesto}</strong><br/>Cantidad: ${number.format(row.cantidad)}<br/>En ${number.format(row.veces)} línea(s) de OT`;
+      },
+    },
+    grid: { left: 190, right: 25, top: 15, bottom: 25 },
+    xAxis: { type: 'value', axisLabel: { formatter: (value) => number.format(value) } },
+    yAxis: {
+      type: 'category',
+      inverse: true,
+      data: repuestosCorrectivos.map((row) => row.repuesto),
+      axisLabel: { width: 170, overflow: 'truncate' },
+    },
+    series: [{
+      type: 'bar',
+      barMaxWidth: 18,
+      itemStyle: { color: '#d97706', borderRadius: [0, 5, 5, 0] },
+      data: repuestosCorrectivos.map((row) => Number(row.cantidad || 0)),
+    }],
+  };
+
   return (
     <div
       className={`mx-auto max-w-[1440px] px-4 pb-5 pt-[4.5rem] transition-all duration-200 sm:px-6 lg:px-8 lg:pt-5 ${filters.sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}
@@ -514,6 +567,20 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           <div className="h-[300px] sm:h-[340px]">
             <ReactECharts option={evolucionPlacasOption} style={{ height: '100%' }} notMerge lazyUpdate />
           </div>
+        </Panel>
+
+        {/* 2c. Ingreso de vehículos por día, dentro del mes filtrado */}
+        <Panel
+          title="Ingreso de vehículos por día"
+          right={<span className="text-xs text-slate-500">Placas distintas por día, mes filtrado</span>}
+        >
+          {porDia.length ? (
+            <div className="h-[260px]">
+              <ReactECharts option={porDiaOption} style={{ height: '100%' }} notMerge lazyUpdate />
+            </div>
+          ) : (
+            <div className="grid h-32 place-items-center text-sm text-slate-500">Sin datos.</div>
+          )}
         </Panel>
 
         {/* 3. Tiempo en taller */}
@@ -714,6 +781,25 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           ) : (
             <div className="grid h-52 place-items-center text-sm text-slate-500">
               Sin líneas de repuestos en este periodo.
+            </div>
+          )}
+        </Panel>
+
+        {/* Repuestos más usados, solo en OT de tipo Correctivo */}
+        <Panel
+          title="Repuestos más usados en Correctivos"
+          right={<span className="text-xs text-slate-500">Top 10, solo OT tipo Correctivo — menos comunes que mantenimiento</span>}
+        >
+          {repuestosCorrectivos.length ? (
+            <ReactECharts
+              option={repuestosCorrectivosOption}
+              style={{ height: Math.max(260, repuestosCorrectivos.length * 32) }}
+              notMerge
+              lazyUpdate
+            />
+          ) : (
+            <div className="grid h-52 place-items-center text-sm text-slate-500">
+              Sin líneas de repuestos de Correctivos en este periodo.
             </div>
           )}
         </Panel>
