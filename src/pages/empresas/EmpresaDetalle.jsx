@@ -139,6 +139,7 @@ function OtReprocesoTable({ filas }) {
 export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) {
   const resumen = data?.resumen || { unidades_ot: 0, unidades_vehiculos: 0, reprocesos: 0, grupo_cliente: null };
   const evolucionMensual = data?.evolucionMensual || [];
+  const evolucionMensualPlacas = data?.evolucionMensualPlacas || [];
   // Merge campo por campo (no solo el objeto completo) para que la pagina no
   // truene si el backend todavia responde con la forma vieja de tiempoTaller
   // (por ejemplo, mientras termina de desplegar un cambio reciente).
@@ -221,6 +222,32 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
         symbolSize: 7,
         data: evolucionMensual.map((row) => row.reprocesos),
         itemStyle: { color: '#e11d48' },
+      },
+    ],
+  };
+
+  // Mismo comparativo año actual vs. año anterior, pero contando vehiculos
+  // distintos (placas) en vez de OT: si el mismo carro volvio 2 veces en el
+  // mes, aca suma 1, no 2 (a diferencia de "Evolución mensual" de arriba).
+  const hayAnioAnteriorPlacas = evolucionMensualPlacas.some((row) => row.placasAnioAnterior > 0);
+  const evolucionPlacasOption = {
+    tooltip: { trigger: 'axis' },
+    legend: { top: 0 },
+    grid: { left: 45, right: 45, top: 40, bottom: 25 },
+    xAxis: { type: 'category', data: MONTH_NAMES },
+    yAxis: { type: 'value', name: 'Vehículos' },
+    series: [
+      ...(hayAnioAnteriorPlacas ? [{
+        name: `Vehículos ${anioAnterior}`,
+        type: 'bar',
+        data: evolucionMensualPlacas.map((row) => row.placasAnioAnterior),
+        itemStyle: { color: '#cbd5e1', borderRadius: [4, 4, 0, 0] },
+      }] : []),
+      {
+        name: `Vehículos ${anioActual}`,
+        type: 'bar',
+        data: evolucionMensualPlacas.map((row) => row.placas),
+        itemStyle: { color: '#7c3aed', borderRadius: [4, 4, 0, 0] },
       },
     ],
   };
@@ -470,6 +497,22 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
         >
           <div className="h-[300px] sm:h-[340px]">
             <ReactECharts option={evolucionOption} style={{ height: '100%' }} notMerge lazyUpdate />
+          </div>
+        </Panel>
+
+        {/* 2b. Evolución mensual, pero por vehículos (placas) únicos */}
+        <Panel
+          title="Evolución mensual · Vehículos únicos"
+          right={(
+            <span className="text-xs text-slate-500">
+              {hayAnioAnteriorPlacas
+                ? `Placas distintas ${anioActual} vs. ${anioAnterior}`
+                : `Placas distintas atendidas por mes, ${anioActual}`}
+            </span>
+          )}
+        >
+          <div className="h-[300px] sm:h-[340px]">
+            <ReactECharts option={evolucionPlacasOption} style={{ height: '100%' }} notMerge lazyUpdate />
           </div>
         </Panel>
 
