@@ -634,16 +634,9 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           right={<span className="text-xs text-slate-500">Cada vehículo, el día de su primer ingreso del mes</span>}
         >
           {porDia.length ? (
-            <>
-              <div className="h-[230px]">
-                <ReactECharts option={porDiaOption} style={{ height: '100%' }} notMerge lazyUpdate />
-              </div>
-              <p className="mt-2 text-xs text-slate-400">
-                Cada vehículo cuenta una sola vez, el día en que ingresó por primera vez en el mes. Por
-                eso este total coincide con "Vehículos únicos" de arriba: si un vehículo vuelve otro día
-                del mismo mes, ese día no se le vuelve a sumar aquí.
-              </p>
-            </>
+            <div className="h-[230px]">
+              <ReactECharts option={porDiaOption} style={{ height: '100%' }} notMerge lazyUpdate />
+            </div>
           ) : (
             <div className="grid h-32 place-items-center text-sm text-slate-500">Sin datos.</div>
           )}
