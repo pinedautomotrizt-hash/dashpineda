@@ -260,6 +260,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   // pagina): de un vistazo se ven los dias fuertes/flojos del mes, formato
   // mas cómodo para una presentación ejecutiva.
   const maxPorDia = Math.max(1, ...porDia.map((row) => row.placas));
+  const totalPorDia = porDia.reduce((sum, row) => sum + row.placas, 0);
   const porDiaOption = {
     tooltip: {
       formatter: (params) => {
@@ -268,6 +269,18 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
         return `<strong>${dia}/${filters.month.slice(5)}</strong><br/>${number.format(valor)} vehículo${valor === 1 ? '' : 's'}`;
       },
     },
+    // Texto del total del mes, al lado de la leyenda de colores.
+    graphic: [{
+      type: 'text',
+      right: 20,
+      top: 12,
+      style: {
+        text: `Total del mes: ${number.format(totalPorDia)} vehículos`,
+        fill: '#334155',
+        fontSize: 12,
+        fontWeight: 600,
+      },
+    }],
     visualMap: {
       min: 0,
       max: maxPorDia,
@@ -277,6 +290,9 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       top: 0,
       itemWidth: 12,
       itemHeight: 90,
+      // Etiquetas de texto a los extremos de la barra: que se lea como
+      // leyenda (Menos/Más), no solo una franja de colores sin explicar.
+      text: ['Más', 'Menos'],
       // Escala de varios colores (no un solo tono): el 0 ya arranca en un gris
       // visible (no blanco puro) para que un día sin ingresos se vea como una
       // celda con color, no como un hueco vacío.
@@ -302,8 +318,14 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       label: {
         show: true,
         formatter: (params) => params.value[0].split('-')[2],
-        color: (params) => (params.value[1] > maxPorDia * 0.65 ? '#ffffff' : '#0f172a'),
+        color: '#0f172a',
+        // Halo blanco alrededor del texto en vez de calcular claro/oscuro
+        // segun el color de fondo: se lee igual de bien en verde, rojo,
+        // naranja o gris sin tener que adivinar el contraste celda por celda.
+        textBorderColor: '#ffffff',
+        textBorderWidth: 3,
         fontSize: 11,
+        fontWeight: 600,
       },
     }],
   };
