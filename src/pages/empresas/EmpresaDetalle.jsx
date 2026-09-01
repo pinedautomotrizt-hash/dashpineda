@@ -275,7 +275,11 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       right: 20,
       top: 12,
       style: {
-        text: `Total del mes: ${number.format(totalPorDia)} vehículos`,
+        // "Ingresos" (no "vehiculos"): esta suma es de placas por dia, un
+        // mismo vehiculo que volvio 2 dias distintos cuenta 2 veces aca — a
+        // proposito distinto del total de "Vehiculos unicos" de mas arriba,
+        // que si deduplica en todo el mes. Ver nota debajo del grafico.
+        text: `Total del mes: ${number.format(totalPorDia)} ingresos`,
         fill: '#334155',
         fontSize: 12,
         fontWeight: 600,
@@ -631,9 +635,16 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           right={<span className="text-xs text-slate-500">Placas distintas por día, mes filtrado</span>}
         >
           {porDia.length ? (
-            <div className="h-[230px]">
-              <ReactECharts option={porDiaOption} style={{ height: '100%' }} notMerge lazyUpdate />
-            </div>
+            <>
+              <div className="h-[230px]">
+                <ReactECharts option={porDiaOption} style={{ height: '100%' }} notMerge lazyUpdate />
+              </div>
+              <p className="mt-2 text-xs text-slate-400">
+                Este total suma los ingresos de cada día: un vehículo que volvió en más de un día del mes
+                se cuenta una vez por cada día. Por eso puede ser mayor al de "Vehículos únicos" de arriba,
+                que cuenta cada placa una sola vez en todo el mes.
+              </p>
+            </>
           ) : (
             <div className="grid h-32 place-items-center text-sm text-slate-500">Sin datos.</div>
           )}
