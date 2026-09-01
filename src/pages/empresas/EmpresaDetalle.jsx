@@ -572,7 +572,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
             tone="blue"
           />
           <Card
-            label="Vehículos distintos"
+            label="Placas únicas"
             value={number.format(resumen.unidades_vehiculos)}
             hint="Placas únicas atendidas en el periodo"
             icon={Car}
