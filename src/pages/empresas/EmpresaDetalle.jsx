@@ -275,11 +275,10 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       right: 20,
       top: 12,
       style: {
-        // "Ingresos" (no "vehiculos"): esta suma es de placas por dia, un
-        // mismo vehiculo que volvio 2 dias distintos cuenta 2 veces aca — a
-        // proposito distinto del total de "Vehiculos unicos" de mas arriba,
-        // que si deduplica en todo el mes. Ver nota debajo del grafico.
-        text: `Total del mes: ${number.format(totalPorDia)} ingresos`,
+        // Cada placa cuenta una sola vez (el dia de su primer ingreso del
+        // mes), asi este total cuadra exacto con "Vehiculos unicos" de
+        // arriba — mismo numero, solo que aqui repartido dia a dia.
+        text: `Total del mes: ${number.format(totalPorDia)} vehículos`,
         fill: '#334155',
         fontSize: 12,
         fontWeight: 600,
@@ -632,7 +631,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
         {/* 2c. Ingreso de vehículos por día, dentro del mes filtrado */}
         <Panel
           title="Ingreso de vehículos por día"
-          right={<span className="text-xs text-slate-500">Placas distintas por día, mes filtrado</span>}
+          right={<span className="text-xs text-slate-500">Cada vehículo, el día de su primer ingreso del mes</span>}
         >
           {porDia.length ? (
             <>
@@ -640,9 +639,9 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
                 <ReactECharts option={porDiaOption} style={{ height: '100%' }} notMerge lazyUpdate />
               </div>
               <p className="mt-2 text-xs text-slate-400">
-                Este total suma los ingresos de cada día: un vehículo que volvió en más de un día del mes
-                se cuenta una vez por cada día. Por eso puede ser mayor al de "Vehículos únicos" de arriba,
-                que cuenta cada placa una sola vez en todo el mes.
+                Cada vehículo cuenta una sola vez, el día en que ingresó por primera vez en el mes. Por
+                eso este total coincide con "Vehículos únicos" de arriba: si un vehículo vuelve otro día
+                del mismo mes, ese día no se le vuelve a sumar aquí.
               </p>
             </>
           ) : (
