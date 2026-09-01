@@ -132,6 +132,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
     maxDias: null,
     otConCierre: 0,
     distribucion: [],
+    porTipoOt: [],
     detalle: [],
     masRapidas: [],
     masLentas: [],
@@ -167,6 +168,13 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
     return [...top, { tipo_ot: OTROS_SERVICIO, unidades: restoUnidades }];
   }, [porTipoOt]);
 
+  const anioActual = data?.anioActual || new Date().getFullYear();
+  const anioAnterior = data?.anioAnterior || anioActual - 1;
+  // Solo tiene sentido comparar si algun mes del año anterior trae data; si el
+  // cliente es nuevo o no se cargo historico, se cae de vuelta al grafico
+  // simple (barras + reprocesos) para no mostrar una serie de puros ceros.
+  const hayAnioAnterior = evolucionMensual.some((row) => row.unidadesAnioAnterior > 0);
+
   const evolucionOption = {
     tooltip: { trigger: 'axis' },
     legend: { top: 0 },
@@ -177,8 +185,14 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       { type: 'value', name: 'Reprocesos', splitLine: { show: false }, minInterval: 1 },
     ],
     series: [
+      ...(hayAnioAnterior ? [{
+        name: `Unidades ${anioAnterior}`,
+        type: 'bar',
+        data: evolucionMensual.map((row) => row.unidadesAnioAnterior),
+        itemStyle: { color: '#cbd5e1', borderRadius: [4, 4, 0, 0] },
+      }] : []),
       {
-        name: 'Unidades atendidas',
+        name: `Unidades ${anioActual}`,
         type: 'bar',
         data: evolucionMensual.map((row) => row.unidades),
         itemStyle: { color: '#155eef', borderRadius: [4, 4, 0, 0] },
@@ -216,6 +230,38 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       barMaxWidth: 44,
       itemStyle: { color: '#f59e0b', borderRadius: [5, 5, 0, 0] },
       data: tiempoTaller.distribucion.map((row) => row.cantidad),
+    }],
+  };
+
+  // Dias promedio en taller, pero partido por tipo de OT (Mantenimiento
+  // Periodico vs Correctivo, etc.) en vez de un solo numero general — para
+  // responder "cuanto se demora en promedio cada TIPO de servicio", no solo
+  // el taller en conjunto.
+  const tiempoPorTipoOtOption = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (items) => {
+        const item = items[0];
+        const row = tiempoTaller.porTipoOt[item.dataIndex];
+        if (!row) return '';
+        return `<strong>${row.tipoOt}</strong><br/>${row.promedioDias ?? '—'} días promedio<br/>${number.format(row.otConCierre)} OT cerradas`;
+      },
+    },
+    grid: { left: 190, right: 30, top: 15, bottom: 25 },
+    xAxis: { type: 'value', name: 'Días', axisLabel: { formatter: (value) => number.format(value) } },
+    yAxis: {
+      type: 'category',
+      inverse: true,
+      data: tiempoTaller.porTipoOt.map((row) => row.tipoOt),
+      axisLabel: { width: 170, overflow: 'truncate' },
+    },
+    series: [{
+      type: 'bar',
+      barMaxWidth: 22,
+      itemStyle: { color: '#0891b2', borderRadius: [0, 5, 5, 0] },
+      label: { show: true, position: 'right', formatter: (p) => `${p.value} d` },
+      data: tiempoTaller.porTipoOt.map((row) => row.promedioDias),
     }],
   };
 
@@ -464,7 +510,13 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
         {/* 2. Evolución mensual */}
         <Panel
           title="Evolución mensual"
-          right={<span className="text-xs text-slate-500">Unidades atendidas y reprocesos, año en curso</span>}
+          right={(
+            <span className="text-xs text-slate-500">
+              {hayAnioAnterior
+                ? `Unidades atendidas ${anioActual} vs. ${anioAnterior}, y reprocesos`
+                : `Unidades atendidas y reprocesos, ${anioActual}`}
+            </span>
+          )}
         >
           <div className="h-[300px] sm:h-[340px]">
             <ReactECharts option={evolucionOption} style={{ height: '100%' }} notMerge lazyUpdate />
@@ -526,6 +578,20 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
               <div className="h-[220px]">
                 <ReactECharts option={distribucionOption} style={{ height: '100%' }} notMerge lazyUpdate />
               </div>
+            </div>
+          )}
+
+          {tiempoTaller.porTipoOt.length > 0 && (
+            <div className="mb-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Días promedio por tipo de servicio (Mantenimiento vs. Correctivo)
+              </p>
+              <ReactECharts
+                option={tiempoPorTipoOtOption}
+                style={{ height: Math.max(140, tiempoTaller.porTipoOt.length * 46) }}
+                notMerge
+                lazyUpdate
+              />
             </div>
           )}
 
