@@ -79,6 +79,41 @@ export function estadoColor(estado) {
   return ESTADO_CHART_COLORS[estado] || '#155eef';
 }
 
+// Nombres de tipo_ot tal cual vienen del reporte de OT (MAYUSCULAS, a veces
+// largos) reescritos a algo mas corto y legible en una card. Cualquier
+// tipo_ot que no este en el mapa se muestra "Title Case" tal cual venga,
+// para no dejar categorias nuevas sin texto.
+const TIPO_OT_LABELS = {
+  'MANTENIMIENTO PERIODICO': 'Mantenimiento periódico',
+  'CORRECTIVO Y REPARACIONES GENERALES': 'Correctivo',
+  'SERVICIO DE CARROCERIA Y PINTURA': 'Carrocería y pintura',
+  'SERVICIO DE CARROCERIA': 'Carrocería',
+  'SERVICIO DE PINTURA': 'Pintura',
+  'REPROCESO TALLER B&P': 'Reproceso taller B&P',
+  'REPROCESO TALLER MECÁNICA': 'Reproceso mecánica',
+  'RECLAMOS DE GARANTIA': 'Reclamo de garantía',
+  'RECLAMOS AL CONCESIONARIO': 'Reclamo al concesionario',
+  LAVADO: 'Lavado',
+  'SERVICIO INTERNO': 'Servicio interno',
+  'LLAMADO A REVISION': 'Llamado a revisión',
+  'CAMBIO DE ACEITE(SRV LUBRICACION)': 'Cambio de aceite',
+  'INSTALACION DE ACCESORIOS ORIGINALES': 'Instalación de accesorios',
+  'OTROS SERVICIOS': 'Otros servicios',
+  'OTROS VEHÍCULOS': 'Otros vehículos',
+};
+
+function tituloCase(texto) {
+  return texto
+    .toLowerCase()
+    .replace(/(^|\s)([a-záéíóúñ])/g, (match, espacio, letra) => espacio + letra.toUpperCase());
+}
+
+export function friendlyTipoOt(tipoOt) {
+  if (!tipoOt) return 'Sin clasificar';
+  const clave = tipoOt.toUpperCase().trim();
+  return TIPO_OT_LABELS[clave] || tituloCase(clave);
+}
+
 export const RANGO_DIAS_LABELS = {
   0: '0 días',
   1: '1 día',

@@ -1,14 +1,30 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
-import { ArrowLeft, Building2, Car, Clock, Gauge, ShieldAlert, TimerReset, Wrench, X } from 'lucide-react';
+import { ArrowLeft, Building2, Car, Clock, Droplets, Gauge, Hammer, PaintBucket, ShieldAlert, Sparkles, TimerReset, Wrench, X } from 'lucide-react';
 import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
 import { Card, Panel, LoadingOverlay } from '../../components/dashboard/DashboardPrimitives';
 import Vehicle3DViewer from '../../components/Vehicle3DViewer';
 import { number, shortDate } from '../../utils/formatters';
 import { APP_PATHS } from '../../config/appConfig';
 import { MONTH_NAMES } from '../../config/appConfig';
-import { friendlyGrupo, friendlyEstado, estadoBadgeClass, estadoColor, RANGO_DIAS_LABELS } from './empresasLabels';
+import { friendlyGrupo, friendlyEstado, friendlyTipoOt, estadoBadgeClass, RANGO_DIAS_LABELS } from './empresasLabels';
+
+// Icono + tono de card por tipo de OT, por palabra clave (no por igualdad
+// exacta, para no tener que mantener un mapa 1 a 1 con cada texto nuevo que
+// pueda aparecer). El orden importa: la primera palabra clave que matchee gana.
+const TIPO_OT_ICONOS = [
+  { match: /MANTENIMIENTO/, icon: Wrench, tone: 'blue' },
+  { match: /CORRECTIVO/, icon: Hammer, tone: 'amber' },
+  { match: /RECLAMO|REPROCESO/, icon: ShieldAlert, tone: 'rose' },
+  { match: /LAVADO/, icon: Droplets, tone: 'green' },
+  { match: /PINTURA|CARROCERIA/, icon: PaintBucket, tone: 'violet' },
+];
+function iconoPorTipoOt(tipoOt) {
+  const clave = (tipoOt || '').toUpperCase();
+  const encontrado = TIPO_OT_ICONOS.find((item) => item.match.test(clave));
+  return encontrado || { icon: Sparkles, tone: 'violet' };
+}
 
 const OTROS_SERVICIO = 'Otros';
 const TOP_SERVICIOS = 9;
@@ -230,72 +246,6 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       barMaxWidth: 44,
       itemStyle: { color: '#f59e0b', borderRadius: [5, 5, 0, 0] },
       data: tiempoTaller.distribucion.map((row) => row.cantidad),
-    }],
-  };
-
-  // Dias promedio en taller, pero partido por tipo de OT (Mantenimiento
-  // Periodico vs Correctivo, etc.) en vez de un solo numero general — para
-  // responder "cuanto se demora en promedio cada TIPO de servicio", no solo
-  // el taller en conjunto.
-  const tiempoPorTipoOtOption = {
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      formatter: (items) => {
-        const item = items[0];
-        const row = tiempoTaller.porTipoOt[item.dataIndex];
-        if (!row) return '';
-        return `<strong>${row.tipoOt}</strong><br/>${row.promedioDias ?? '—'} días promedio<br/>${number.format(row.otConCierre)} OT cerradas`;
-      },
-    },
-    grid: { left: 190, right: 30, top: 15, bottom: 25 },
-    xAxis: { type: 'value', name: 'Días', axisLabel: { formatter: (value) => number.format(value) } },
-    yAxis: {
-      type: 'category',
-      inverse: true,
-      data: tiempoTaller.porTipoOt.map((row) => row.tipoOt),
-      axisLabel: { width: 170, overflow: 'truncate' },
-    },
-    series: [{
-      type: 'bar',
-      barMaxWidth: 22,
-      itemStyle: { color: '#0891b2', borderRadius: [0, 5, 5, 0] },
-      label: { show: true, position: 'right', formatter: (p) => `${p.value} d` },
-      data: tiempoTaller.porTipoOt.map((row) => row.promedioDias),
-    }],
-  };
-
-  // Reemplaza la tabla "Ultimas OT del periodo": barras horizontales de dias
-  // en taller por OT, coloreadas por estado, mismo orden que traia la tabla
-  // (mas reciente primero).
-  const detalleOtOption = {
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      formatter: (items) => {
-        const item = items[0];
-        const row = tiempoTaller.detalle[item.dataIndex];
-        if (!row) return '';
-        const dias = row.dias === null ? 'Aún en taller' : `${row.dias} días`;
-        return `<strong>${row.placa || 'Sin placa'}</strong><br/>${friendlyEstado(row.estado)} · ${dias}`;
-      },
-    },
-    grid: { left: 140, right: 25, top: 15, bottom: 25 },
-    xAxis: { type: 'value', name: 'Días', axisLabel: { formatter: (value) => number.format(value) } },
-    yAxis: {
-      type: 'category',
-      inverse: true,
-      data: tiempoTaller.detalle.map((row) => row.placa || 'Sin placa'),
-      axisLabel: { width: 120, overflow: 'truncate' },
-    },
-    series: [{
-      type: 'bar',
-      barMaxWidth: 18,
-      itemStyle: {
-        color: (params) => estadoColor(tiempoTaller.detalle[params.dataIndex]?.estado),
-        borderRadius: [0, 5, 5, 0],
-      },
-      data: tiempoTaller.detalle.map((row) => row.dias),
     }],
   };
 
@@ -582,39 +532,25 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           )}
 
           {tiempoTaller.porTipoOt.length > 0 && (
-            <div className="mb-4">
+            <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Días promedio por tipo de servicio (Mantenimiento vs. Correctivo)
+                Días promedio por tipo de servicio
               </p>
-              <ReactECharts
-                option={tiempoPorTipoOtOption}
-                style={{ height: Math.max(140, tiempoTaller.porTipoOt.length * 46) }}
-                notMerge
-                lazyUpdate
-              />
-            </div>
-          )}
-
-          {tiempoTaller.detalle.length ? (
-            <>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Últimas {tiempoTaller.detalle.length} OT del periodo
-              </p>
-              <ReactECharts
-                option={detalleOtOption}
-                style={{ height: Math.max(260, tiempoTaller.detalle.length * 28) }}
-                notMerge
-                lazyUpdate
-              />
-              <p className="mt-3 text-xs text-slate-400">
-                Este gráfico es una muestra de las OT más recientes. El promedio, el mínimo/máximo y el
-                gráfico de distribución de arriba se calculan sobre todas las OT cerradas del periodo,
-                no solo las que ves aquí.
-              </p>
-            </>
-          ) : (
-            <div className="grid h-32 place-items-center text-sm text-slate-500">
-              Sin OT en este periodo.
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {tiempoTaller.porTipoOt.map((row) => {
+                  const { icon, tone } = iconoPorTipoOt(row.tipoOt);
+                  return (
+                    <Card
+                      key={row.tipoOt}
+                      label={friendlyTipoOt(row.tipoOt)}
+                      value={row.promedioDias !== null ? `${row.promedioDias} días` : 'Sin datos'}
+                      hint={`${number.format(row.otConCierre)} OT cerradas`}
+                      icon={icon}
+                      tone={tone}
+                    />
+                  );
+                })}
+              </div>
             </div>
           )}
         </Panel>
