@@ -96,7 +96,6 @@ function SedeProyeccion({ sede, metasPorAnio, facturadoPorCelda }) {
 
   const valor = (anio, mes) => facturadoPorCelda.get(`${sede}|${anio}|${mes}`) || 0;
   const esFuturo = (anio, mes) => anio > anioActual || (anio === anioActual && mes > mesActual);
-  const esMesActual = (anio, mes) => anio === anioActual && mes === mesActual;
 
   const chartOption = useMemo(() => buildChartOption({ anios, metasPorAnio, valor }), [anios, metasPorAnio, facturadoPorCelda]);
 
@@ -131,7 +130,6 @@ function SedeProyeccion({ sede, metasPorAnio, facturadoPorCelda }) {
               metaAnio={metasPorAnio[anio]}
               valor={valor}
               esFuturo={esFuturo}
-              esMesActual={esMesActual}
             />
           );
         })}
@@ -140,7 +138,7 @@ function SedeProyeccion({ sede, metasPorAnio, facturadoPorCelda }) {
   );
 }
 
-function TablaAnio({ anio, anioAnterior, metaAnio, valor, esFuturo, esMesActual }) {
+function TablaAnio({ anio, anioAnterior, metaAnio, valor, esFuturo }) {
   const meses = MONTH_NAMES.map((_, index) => index + 1);
   const alcanceAnual = meses.reduce((suma, mes) => suma + (esFuturo(anio, mes) ? 0 : valor(anio, mes)), 0);
   const metaAnual = meses.reduce(
@@ -175,7 +173,6 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, esFuturo, esMesActual 
             {meses.map((mes) => (
               <td key={mes} className="px-2 py-1.5 text-right text-slate-900">
                 {esFuturo(anio, mes) ? '—' : money(valor(anio, mes))}
-                {esMesActual(anio, mes) && <span className="ml-1 text-[10px] font-semibold text-blue-600">·en curso</span>}
               </td>
             ))}
             <td className="px-3 py-1.5 text-right font-semibold text-slate-900">{money(alcanceAnual)}</td>
