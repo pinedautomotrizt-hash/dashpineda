@@ -13,6 +13,7 @@ import {
 import { Card, Panel, LoadingOverlay } from '../../components/dashboard/DashboardPrimitives';
 import { money, moneyByCurrency, number, pct, shortDate } from '../../utils/formatters';
 import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
+import ProyeccionAnualPanel from '../../components/dashboard/ProyeccionAnualPanel';
 
 
 export default function FacturacionDashboard({ data, filters, error }) {
@@ -490,6 +491,7 @@ export default function FacturacionDashboard({ data, filters, error }) {
           )}
         </Panel>
       </section>
+      <ProyeccionAnualPanel />
       </div>
     </div>
   );
