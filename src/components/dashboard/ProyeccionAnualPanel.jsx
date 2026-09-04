@@ -12,6 +12,19 @@ const mesActual = hoy.getMonth() + 1;
 const diasDelMesActual = new Date(anioActual, mesActual, 0).getDate();
 const diasTranscurridos = hoy.getDate();
 
+// La meta de un año puede ser un número fijo (misma meta los 12 meses) o un
+// arreglo de 12 valores cuando cambia dentro del año (ver metas.js backend).
+function metaDelMes(metaAnio, mes) {
+  return Array.isArray(metaAnio) ? Number(metaAnio[mes - 1] || 0) : Number(metaAnio || 0);
+}
+
+function resumenMeta(metaAnio) {
+  if (!Array.isArray(metaAnio)) return `${money(metaAnio)}/mes`;
+  const min = Math.min(...metaAnio);
+  const max = Math.max(...metaAnio);
+  return min === max ? `${money(min)}/mes` : `${money(min)} – ${money(max)}/mes`;
+}
+
 // Semáforo del % de alcance: mismo criterio que el Excel de facturación
 // (colorSemaforo en reportesFacturacion.service.js) — bueno / regular / bajo.
 function toneAlcance(porcentaje) {
@@ -97,7 +110,7 @@ function SedeProyeccion({ sede, metasPorAnio, facturadoPorCelda }) {
         <div className="flex flex-wrap gap-3 text-xs text-slate-500">
           {anios.map((anio) => (
             <span key={anio} className="rounded-full bg-slate-100 px-3 py-1">
-              Meta {anio}: <span className="font-semibold text-slate-700">{money(metasPorAnio[anio])}/mes</span>
+              Meta {anio}: <span className="font-semibold text-slate-700">{resumenMeta(metasPorAnio[anio])}</span>
             </span>
           ))}
         </div>
@@ -115,7 +128,7 @@ function SedeProyeccion({ sede, metasPorAnio, facturadoPorCelda }) {
               key={anio}
               anio={anio}
               anioAnterior={anioAnterior}
-              meta={metasPorAnio[anio]}
+              metaAnio={metasPorAnio[anio]}
               valor={valor}
               esFuturo={esFuturo}
               esMesActual={esMesActual}
@@ -127,10 +140,13 @@ function SedeProyeccion({ sede, metasPorAnio, facturadoPorCelda }) {
   );
 }
 
-function TablaAnio({ anio, anioAnterior, meta, valor, esFuturo, esMesActual }) {
+function TablaAnio({ anio, anioAnterior, metaAnio, valor, esFuturo, esMesActual }) {
   const meses = MONTH_NAMES.map((_, index) => index + 1);
   const alcanceAnual = meses.reduce((suma, mes) => suma + (esFuturo(anio, mes) ? 0 : valor(anio, mes)), 0);
-  const metaAnual = meta * meses.filter((mes) => !esFuturo(anio, mes)).length;
+  const metaAnual = meses.reduce(
+    (suma, mes) => suma + (esFuturo(anio, mes) ? 0 : metaDelMes(metaAnio, mes)),
+    0,
+  );
 
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200">
@@ -149,7 +165,7 @@ function TablaAnio({ anio, anioAnterior, meta, valor, esFuturo, esMesActual }) {
             <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-medium text-slate-600">Meta</td>
             {meses.map((mes) => (
               <td key={mes} className="px-2 py-1.5 text-right text-slate-500">
-                {esFuturo(anio, mes) ? '—' : money(meta)}
+                {esFuturo(anio, mes) ? '—' : money(metaDelMes(metaAnio, mes))}
               </td>
             ))}
             <td className="px-3 py-1.5 text-right font-semibold text-slate-600">{money(metaAnual)}</td>
@@ -168,7 +184,8 @@ function TablaAnio({ anio, anioAnterior, meta, valor, esFuturo, esMesActual }) {
             <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-medium text-slate-600">% Alcance</td>
             {meses.map((mes) => {
               const futuro = esFuturo(anio, mes);
-              const porcentaje = futuro || !meta ? null : (valor(anio, mes) / meta) * 100;
+              const metaMes = metaDelMes(metaAnio, mes);
+              const porcentaje = futuro || !metaMes ? null : (valor(anio, mes) / metaMes) * 100;
               return (
                 <td key={mes} className={`px-2 py-1.5 text-right ${toneAlcance(porcentaje)}`}>
                   {porcentaje === null ? '—' : pct(porcentaje)}
@@ -210,7 +227,7 @@ function buildChartOption({ anios, metasPorAnio, valor }) {
   const ultimoAnio = anios[anios.length - 1];
   const anioPrevio = anios[anios.length - 2];
   const meses = MONTH_NAMES.map((_, index) => index + 1);
-  const metaUltimoAnio = metasPorAnio[ultimoAnio] || 0;
+  const metaUltimoAnio = metasPorAnio[ultimoAnio];
 
   const series = [];
   if (anioPrevio) {
@@ -235,7 +252,7 @@ function buildChartOption({ anios, metasPorAnio, valor }) {
     lineStyle: { type: 'dashed', width: 2, color: '#dc2626' },
     itemStyle: { color: '#dc2626' },
     symbol: 'none',
-    data: meses.map(() => metaUltimoAnio),
+    data: meses.map((mes) => metaDelMes(metaUltimoAnio, mes)),
   });
 
   return {
