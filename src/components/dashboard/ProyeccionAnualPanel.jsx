@@ -60,6 +60,14 @@ export default function ProyeccionAnualPanel() {
     return mapa;
   }, [data]);
 
+  const unidadesPorCelda = useMemo(() => {
+    const mapa = new Map();
+    (data?.unidades || []).forEach((fila) => {
+      mapa.set(`${fila.local_nombre}|${fila.anio}|${fila.mes}`, Number(fila.unidades || 0));
+    });
+    return mapa;
+  }, [data]);
+
   const metas = data?.metas || {};
   const sedes = Object.keys(metas);
 
@@ -79,6 +87,7 @@ export default function ProyeccionAnualPanel() {
                 sede={sede}
                 metasPorAnio={metas[sede]}
                 facturadoPorCelda={facturadoPorCelda}
+                unidadesPorCelda={unidadesPorCelda}
               />
             ))}
             {!loading && !sedes.length && (
@@ -91,10 +100,11 @@ export default function ProyeccionAnualPanel() {
   );
 }
 
-function SedeProyeccion({ sede, metasPorAnio, facturadoPorCelda }) {
+function SedeProyeccion({ sede, metasPorAnio, facturadoPorCelda, unidadesPorCelda }) {
   const anios = Object.keys(metasPorAnio).map(Number).sort((a, b) => a - b);
 
   const valor = (anio, mes) => facturadoPorCelda.get(`${sede}|${anio}|${mes}`) || 0;
+  const unidades = (anio, mes) => unidadesPorCelda.get(`${sede}|${anio}|${mes}`) || 0;
   const esFuturo = (anio, mes) => anio > anioActual || (anio === anioActual && mes > mesActual);
 
   const chartOption = useMemo(() => buildChartOption({ anios, metasPorAnio, valor }), [anios, metasPorAnio, facturadoPorCelda]);
@@ -129,6 +139,7 @@ function SedeProyeccion({ sede, metasPorAnio, facturadoPorCelda }) {
               anioAnterior={anioAnterior}
               metaAnio={metasPorAnio[anio]}
               valor={valor}
+              unidades={unidades}
               esFuturo={esFuturo}
             />
           );
@@ -138,13 +149,26 @@ function SedeProyeccion({ sede, metasPorAnio, facturadoPorCelda }) {
   );
 }
 
-function TablaAnio({ anio, anioAnterior, metaAnio, valor, esFuturo }) {
+function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) {
   const meses = MONTH_NAMES.map((_, index) => index + 1);
   const alcanceAnual = meses.reduce((suma, mes) => suma + (esFuturo(anio, mes) ? 0 : valor(anio, mes)), 0);
+  const unidadesAnuales = meses.reduce((suma, mes) => suma + (esFuturo(anio, mes) ? 0 : unidades(anio, mes)), 0);
   const metaAnual = meses.reduce(
     (suma, mes) => suma + (esFuturo(anio, mes) ? 0 : metaDelMes(metaAnio, mes)),
     0,
   );
+  // El ticket se calcula sobre las mismas unidades (placas unicas) que se
+  // usan para la proyeccion. Para los meses futuros se conserva el ticket
+  // real acumulado del anio y se aplica el volumen del mismo mes anterior.
+  const ticketAcumulado = unidadesAnuales ? alcanceAnual / unidadesAnuales : null;
+  const esAnioActual = anio === anioActual;
+  const unidadesProyectadas = (mes) => (anioAnterior ? unidades(anioAnterior, mes) : null);
+  const proyeccionMes = (mes) => (
+    esFuturo(anio, mes)
+      ? (unidadesProyectadas(mes) || 0) * (ticketAcumulado || 0)
+      : valor(anio, mes)
+  );
+  const proyeccionAnual = meses.reduce((suma, mes) => suma + proyeccionMes(mes), 0);
 
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200">
@@ -168,6 +192,53 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, esFuturo }) {
             ))}
             <td className="px-3 py-1.5 text-right font-semibold text-slate-600">{money(metaAnual)}</td>
           </tr>
+          <tr className="border-t border-slate-100">
+            <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-medium text-slate-600">Unidades atendidas</td>
+            {meses.map((mes) => (
+              <td key={mes} className="px-2 py-1.5 text-right text-slate-900">
+                {esFuturo(anio, mes) ? 'â€”' : Number(unidades(anio, mes)).toLocaleString('es-PE')}
+              </td>
+            ))}
+            <td className="px-3 py-1.5 text-right font-semibold text-slate-900">{Number(unidadesAnuales).toLocaleString('es-PE')}</td>
+          </tr>
+          <tr className="border-t border-slate-100">
+            <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-medium text-slate-600">Ticket prom. por unidad</td>
+            {meses.map((mes) => {
+              const unidadesMes = unidades(anio, mes);
+              const ticketMes = unidadesMes ? valor(anio, mes) / unidadesMes : null;
+              return <td key={mes} className="px-2 py-1.5 text-right text-slate-900">{esFuturo(anio, mes) || ticketMes === null ? 'â€”' : money(ticketMes)}</td>;
+            })}
+            <td className="px-3 py-1.5 text-right font-semibold text-slate-900">{ticketAcumulado === null ? 'â€”' : money(ticketAcumulado)}</td>
+          </tr>
+          {esAnioActual && (
+            <>
+              <tr className="border-t border-slate-100 bg-indigo-50/50">
+                <td className="sticky left-0 z-10 bg-indigo-50/50 px-3 py-1.5 text-left font-medium text-indigo-800">Unidades estimadas</td>
+                {meses.map((mes) => (
+                  <td key={mes} className="px-2 py-1.5 text-right text-indigo-800">
+                    {esFuturo(anio, mes) ? Number(unidadesProyectadas(mes) || 0).toLocaleString('es-PE') : 'â€”'}
+                  </td>
+                ))}
+                <td className="px-3 py-1.5 text-right text-indigo-800">Base {anioAnterior || 'â€”'}</td>
+              </tr>
+              <tr className="border-t border-slate-100 bg-indigo-50/50">
+                <td className="sticky left-0 z-10 bg-indigo-50/50 px-3 py-1.5 text-left font-medium text-indigo-800">Ticket estimado</td>
+                {meses.map((mes) => (
+                  <td key={mes} className="px-2 py-1.5 text-right text-indigo-800">
+                    {esFuturo(anio, mes) && ticketAcumulado !== null ? money(ticketAcumulado) : 'â€”'}
+                  </td>
+                ))}
+                <td className="px-3 py-1.5 text-right font-semibold text-indigo-800">{ticketAcumulado === null ? 'â€”' : money(ticketAcumulado)}</td>
+              </tr>
+              <tr className="border-t border-indigo-100 bg-indigo-50/50">
+                <td className="sticky left-0 z-10 bg-indigo-50/50 px-3 py-1.5 text-left font-semibold text-indigo-900">ProyecciÃ³n facturaciÃ³n</td>
+                {meses.map((mes) => (
+                  <td key={mes} className="px-2 py-1.5 text-right font-semibold text-indigo-900">{money(proyeccionMes(mes))}</td>
+                ))}
+                <td className="px-3 py-1.5 text-right font-bold text-indigo-900">{money(proyeccionAnual)}</td>
+              </tr>
+            </>
+          )}
           <tr className="border-t border-slate-100">
             <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-medium text-slate-600">Alcance</td>
             {meses.map((mes) => (
