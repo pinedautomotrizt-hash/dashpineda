@@ -196,7 +196,7 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
             <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-medium text-slate-600">Unidades atendidas</td>
             {meses.map((mes) => (
               <td key={mes} className="px-2 py-1.5 text-right text-slate-900">
-                {esFuturo(anio, mes) ? 'â€”' : Number(unidades(anio, mes)).toLocaleString('es-PE')}
+                {esFuturo(anio, mes) ? '\u2014' : Number(unidades(anio, mes)).toLocaleString('es-PE')}
               </td>
             ))}
             <td className="px-3 py-1.5 text-right font-semibold text-slate-900">{Number(unidadesAnuales).toLocaleString('es-PE')}</td>
@@ -206,9 +206,9 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
             {meses.map((mes) => {
               const unidadesMes = unidades(anio, mes);
               const ticketMes = unidadesMes ? valor(anio, mes) / unidadesMes : null;
-              return <td key={mes} className="px-2 py-1.5 text-right text-slate-900">{esFuturo(anio, mes) || ticketMes === null ? 'â€”' : money(ticketMes)}</td>;
+              return <td key={mes} className="px-2 py-1.5 text-right text-slate-900">{esFuturo(anio, mes) || ticketMes === null ? '\u2014' : money(ticketMes)}</td>;
             })}
-            <td className="px-3 py-1.5 text-right font-semibold text-slate-900">{ticketAcumulado === null ? 'â€”' : money(ticketAcumulado)}</td>
+            <td className="px-3 py-1.5 text-right font-semibold text-slate-900">{ticketAcumulado === null ? '\u2014' : money(ticketAcumulado)}</td>
           </tr>
           {esAnioActual && (
             <>
@@ -216,22 +216,22 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
                 <td className="sticky left-0 z-10 bg-indigo-50/50 px-3 py-1.5 text-left font-medium text-indigo-800">Unidades estimadas</td>
                 {meses.map((mes) => (
                   <td key={mes} className="px-2 py-1.5 text-right text-indigo-800">
-                    {esFuturo(anio, mes) ? Number(unidadesProyectadas(mes) || 0).toLocaleString('es-PE') : 'â€”'}
+                    {esFuturo(anio, mes) ? Number(unidadesProyectadas(mes) || 0).toLocaleString('es-PE') : '\u2014'}
                   </td>
                 ))}
-                <td className="px-3 py-1.5 text-right text-indigo-800">Base {anioAnterior || 'â€”'}</td>
+                <td className="px-3 py-1.5 text-right text-indigo-800">Base {anioAnterior || '\u2014'}</td>
               </tr>
               <tr className="border-t border-slate-100 bg-indigo-50/50">
                 <td className="sticky left-0 z-10 bg-indigo-50/50 px-3 py-1.5 text-left font-medium text-indigo-800">Ticket estimado</td>
                 {meses.map((mes) => (
                   <td key={mes} className="px-2 py-1.5 text-right text-indigo-800">
-                    {esFuturo(anio, mes) && ticketAcumulado !== null ? money(ticketAcumulado) : 'â€”'}
+                    {esFuturo(anio, mes) && ticketAcumulado !== null ? money(ticketAcumulado) : '\u2014'}
                   </td>
                 ))}
-                <td className="px-3 py-1.5 text-right font-semibold text-indigo-800">{ticketAcumulado === null ? 'â€”' : money(ticketAcumulado)}</td>
+                <td className="px-3 py-1.5 text-right font-semibold text-indigo-800">{ticketAcumulado === null ? '\u2014' : money(ticketAcumulado)}</td>
               </tr>
               <tr className="border-t border-indigo-100 bg-indigo-50/50">
-                <td className="sticky left-0 z-10 bg-indigo-50/50 px-3 py-1.5 text-left font-semibold text-indigo-900">ProyecciÃ³n facturaciÃ³n</td>
+                <td className="sticky left-0 z-10 bg-indigo-50/50 px-3 py-1.5 text-left font-semibold text-indigo-900">Proyecci&oacute;n facturaci&oacute;n</td>
                 {meses.map((mes) => (
                   <td key={mes} className="px-2 py-1.5 text-right font-semibold text-indigo-900">{money(proyeccionMes(mes))}</td>
                 ))}
