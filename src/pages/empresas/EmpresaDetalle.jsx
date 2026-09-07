@@ -207,6 +207,15 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
 
   const anioActual = data?.anioActual || new Date().getFullYear();
   const anioAnterior = data?.anioAnterior || anioActual - 1;
+  // El filtro entrega el mes como YYYY-MM. Se usan sus días reales para el
+  // promedio diario, incluyendo febrero y los años bisiestos.
+  const [anioFiltro, mesFiltro] = (filters.month || '').split('-').map(Number);
+  const diasDelMesFiltrado = anioFiltro && mesFiltro
+    ? new Date(anioFiltro, mesFiltro, 0).getDate()
+    : 0;
+  const promedioDiarioUnidadesUnicas = diasDelMesFiltrado
+    ? Number(resumen.unidades_vehiculos || 0) / diasDelMesFiltrado
+    : 0;
   // Solo tiene sentido comparar si algun mes del año anterior trae data; si el
   // cliente es nuevo o no se cargo historico, se cae de vuelta al grafico
   // simple (barras + reprocesos) para no mostrar una serie de puros ceros.
@@ -631,7 +640,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
 
 
         {/* 1. Resumen */}
-        <section className={MOSTRAR_CARD_REPROCESOS ? 'grid gap-3 sm:grid-cols-3' : 'grid gap-3 sm:grid-cols-2'}>
+        <section className={`grid gap-3 sm:grid-cols-2 ${MOSTRAR_CARD_REPROCESOS ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
           <Card
             label="OT únicas"
             value={number.format(resumen.unidades_ot)}
@@ -645,6 +654,13 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
             hint="Placas únicas atendidas en el periodo"
             icon={Car}
             tone="violet"
+          />
+          <Card
+            label="Promedio diario"
+            value={promedioDiarioUnidadesUnicas.toFixed(1)}
+            hint={`Unidades únicas por día de ${diasDelMesFiltrado || 0} días`}
+            icon={Gauge}
+            tone="green"
           />
           {MOSTRAR_CARD_REPROCESOS && (
             <button
