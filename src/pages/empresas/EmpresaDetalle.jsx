@@ -190,6 +190,18 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   const [modalReprocesos, setModalReprocesos] = useState(false);
   const masRapidas = tiempoTaller.masRapidas || [];
   const masLentas = tiempoTaller.masLentas || [];
+  // Estas dos tarjetas siempre deben verse: si la importación no trae
+  // horas-hombre, informan la ausencia del dato en vez de desaparecer.
+  const tiempoAtencionPorTipo = useMemo(() => {
+    const tipos = [
+      { tipoOt: 'MANTENIMIENTO PERIODICO', texto: 'MANTENIMIENTO' },
+      { tipoOt: 'CORRECTIVO Y REPARACIONES GENERALES', texto: 'CORRECTIVO' },
+    ];
+    return tipos.map(({ tipoOt, texto }) => (
+      tiempoTaller.porTipoOt.find((row) => String(row.tipoOt || '').toUpperCase().includes(texto))
+      || { tipoOt, promedioHoras: null, promedioDias: null, otConCierre: 0 }
+    ));
+  }, [tiempoTaller.porTipoOt]);
 
   const porServicioAgrupado = useMemo(() => {
     if (porServicio.length <= TOP_SERVICIOS) return porServicio;
@@ -781,13 +793,13 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
             </div>
           )}
 
-          {tiempoTaller.porTipoOt.length > 0 && (
+          {tiempoAtencionPorTipo.length > 0 && (
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Tiempo promedio de atención por tipo de servicio
               </p>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {tiempoTaller.porTipoOt.map((row) => {
+                {tiempoAtencionPorTipo.map((row) => {
                   const { icon, tone } = iconoPorTipoOt(row.tipoOt);
                   return (
                     <Card
@@ -796,7 +808,9 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
                       value={row.promedioHoras !== null ? `${row.promedioHoras} horas` : 'Sin datos'}
                       hint={row.promedioHoras !== null
                         ? `${row.promedioDias} días equivalentes (8 h) · ${number.format(row.otConCierre)} OT cerradas`
-                        : `${number.format(row.otConCierre)} OT cerradas`}
+                        : row.otConCierre
+                          ? `${number.format(row.otConCierre)} OT cerradas · sin horas registradas`
+                          : 'Sin OT cerradas en el período'}
                       icon={icon}
                       tone={tone}
                     />
