@@ -784,7 +784,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           {tiempoTaller.porTipoOt.length > 0 && (
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Días promedio por tipo de servicio
+                Tiempo promedio de atención por tipo de servicio
               </p>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {tiempoTaller.porTipoOt.map((row) => {
@@ -793,8 +793,10 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
                     <Card
                       key={row.tipoOt}
                       label={friendlyTipoOt(row.tipoOt)}
-                      value={row.promedioDias !== null ? `${row.promedioDias} días` : 'Sin datos'}
-                      hint={`${number.format(row.otConCierre)} OT cerradas`}
+                      value={row.promedioHoras !== null ? `${row.promedioHoras} horas` : 'Sin datos'}
+                      hint={row.promedioHoras !== null
+                        ? `${row.promedioDias} días equivalentes (8 h) · ${number.format(row.otConCierre)} OT cerradas`
+                        : `${number.format(row.otConCierre)} OT cerradas`}
                       icon={icon}
                       tone={tone}
                     />
