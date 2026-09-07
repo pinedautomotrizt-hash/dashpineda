@@ -334,7 +334,6 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   // calor en vez de otra barra mas (ya hay varios graficos de barras en esta
   // pagina): de un vistazo se ven los dias fuertes/flojos del mes, formato
   // mas cómodo para una presentación ejecutiva.
-  const maxPorDia = Math.max(1, ...porDia.map((row) => row.placas));
   const totalPorDia = porDia.reduce((sum, row) => sum + row.placas, 0);
   const porDiaOption = {
     tooltip: {
@@ -360,21 +359,16 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       },
     }],
     visualMap: {
-      min: 0,
-      max: maxPorDia,
       calculable: false,
       orient: 'horizontal',
       left: 'center',
       top: 0,
       itemWidth: 12,
       itemHeight: 90,
-      // Etiquetas de texto a los extremos de la barra: que se lea como
-      // leyenda (Menos/Más), no solo una franja de colores sin explicar.
-      text: ['Más', 'Menos'],
-      // Escala de varios colores (no un solo tono): el 0 ya arranca en un gris
-      // visible (no blanco puro) para que un día sin ingresos se vea como una
-      // celda con color, no como un hueco vacío.
-      inRange: { color: ['#e2e8f0', '#38bdf8', '#22c55e', '#facc15', '#f97316', '#dc2626'] },
+      pieces: [
+        { value: 0, label: 'Sin unidades', color: '#dc2626' },
+        { gt: 0, label: 'Con unidades', color: '#22c55e' },
+      ],
       textStyle: { color: '#64748b', fontSize: 11 },
     },
     calendar: {
