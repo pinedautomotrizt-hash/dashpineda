@@ -363,8 +363,11 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       orient: 'horizontal',
       left: 'center',
       top: 0,
-      itemWidth: 12,
-      itemHeight: 90,
+      // En modo por categorías, los indicadores deben ser pequeños. La
+      // altura anterior era para una escala continua y generaba barras altas.
+      itemWidth: 14,
+      itemHeight: 14,
+      itemGap: 18,
       pieces: [
         { value: 0, label: 'Sin unidades', color: '#dc2626' },
         { gt: 0, label: 'Con unidades', color: '#22c55e' },
