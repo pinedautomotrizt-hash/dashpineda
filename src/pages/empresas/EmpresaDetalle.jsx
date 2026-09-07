@@ -736,7 +736,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
             <Card
               label="Días promedio en taller"
               value={tiempoTaller.promedioDias !== null ? `${tiempoTaller.promedioDias} días` : 'Sin datos'}
-              hint={`Sobre ${number.format(tiempoTaller.otParaPromedio)} OT, excepto las de 1 día`}
+              hint={`Sobre ${number.format(tiempoTaller.otParaPromedio)} OT de máximo 1 día`}
               icon={Clock}
               tone="amber"
             />
