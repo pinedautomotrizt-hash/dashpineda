@@ -180,7 +180,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   const porVehiculo = data?.porVehiculo || [];
   const porSede = data?.porSede || [];
   const reprocesosDetalle = data?.reprocesosDetalle || [];
-  const repuestosMasUsados = data?.repuestosMasUsados || [];
+  const manoObraTop = data?.manoObraTop || [];
   const repuestosCorrectivos = data?.repuestosCorrectivos || [];
   const porDia = data?.porDia || [];
 
@@ -534,15 +534,15 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
     }],
   };
 
-  const repuestosOption = {
+  const manoObraOption = {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       formatter: (items) => {
         const item = items[0];
-        const row = repuestosMasUsados[item.dataIndex];
+        const row = manoObraTop[item.dataIndex];
         if (!row) return '';
-        return `<strong>${row.repuesto}</strong><br/>Cantidad: ${number.format(row.cantidad)}<br/>En ${number.format(row.veces)} línea(s) de OT`;
+        return `<strong>${row.servicio}</strong><br/>Cantidad: ${number.format(row.cantidad)}<br/>En ${number.format(row.veces)} línea(s) de OT`;
       },
     },
     grid: { left: 190, right: 25, top: 15, bottom: 25 },
@@ -550,14 +550,14 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
     yAxis: {
       type: 'category',
       inverse: true,
-      data: repuestosMasUsados.map((row) => row.repuesto),
+      data: manoObraTop.map((row) => row.servicio),
       axisLabel: { width: 170, overflow: 'truncate' },
     },
     series: [{
       type: 'bar',
       barMaxWidth: 18,
       itemStyle: { color: '#059669', borderRadius: [0, 5, 5, 0] },
-      data: repuestosMasUsados.map((row) => Number(row.cantidad || 0)),
+      data: manoObraTop.map((row) => Number(row.cantidad || 0)),
     }],
   };
 
@@ -910,21 +910,21 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           </Panel>
         </div>
 
-        {/* Repuestos más utilizados */}
+        {/* Top de mano de obra */}
         <Panel
-          title="Repuestos más utilizados"
-          right={<span className="text-xs text-slate-500">Top 10 por cantidad consumida en el periodo</span>}
+          title="Mano de obra: top de servicios"
+          right={<span className="text-xs text-slate-500">Top 10 por cantidad registrada en el periodo</span>}
         >
-          {repuestosMasUsados.length ? (
+          {manoObraTop.length ? (
             <ReactECharts
-              option={repuestosOption}
-              style={{ height: Math.max(260, repuestosMasUsados.length * 32) }}
+              option={manoObraOption}
+              style={{ height: Math.max(260, manoObraTop.length * 32) }}
               notMerge
               lazyUpdate
             />
           ) : (
             <div className="grid h-52 place-items-center text-sm text-slate-500">
-              Sin líneas de repuestos en este periodo.
+              Sin líneas de mano de obra en este periodo.
             </div>
           )}
         </Panel>
