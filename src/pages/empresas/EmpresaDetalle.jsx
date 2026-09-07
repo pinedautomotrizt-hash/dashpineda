@@ -36,6 +36,24 @@ const TIPO_OT_COLORS = ['#155eef', '#f59e0b', '#e11d48', '#7c3aed', '#0891b2', '
 const MOSTRAR_CARD_REPROCESOS = false;
 const MOSTRAR_CARDS_TIEMPO_EXTREMO = false;
 
+// Tooltip compartido para los comparativos mensuales. La variación se calcula
+// contra el mismo mes del año anterior, no contra el mes previo.
+function tooltipVariacionMensual({ anterior, actual, etiqueta, anioAnterior, anioActual }) {
+  const valorAnterior = Number(anterior) || 0;
+  const valorActual = Number(actual) || 0;
+
+  if (valorAnterior === 0) {
+    if (valorActual === 0) return 'Sin movimientos en ambos años';
+    return `Nuevo registro en ${anioActual} (sin base en ${anioAnterior})`;
+  }
+
+  const variacion = ((valorActual - valorAnterior) / valorAnterior) * 100;
+  if (variacion === 0) return 'Sin variación frente al año anterior';
+
+  const subio = variacion > 0;
+  return `${subio ? '▲' : '▼'} ${Math.abs(variacion).toFixed(1)}%: ${etiqueta} ${subio ? 'subieron' : 'bajaron'} frente a ${anioAnterior}`;
+}
+
 // Mismo patron de modal que ya usa DashboardPage.jsx (fondo oscuro + tarjeta
 // blanca centrada) para no introducir un segundo estilo de modal en el proyecto.
 // Solo el "cascaron" (fondo, tarjeta, encabezado, boton cerrar) es compartido;
@@ -195,7 +213,32 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   const hayAnioAnterior = evolucionMensual.some((row) => row.unidadesAnioAnterior > 0);
 
   const evolucionOption = {
-    tooltip: { trigger: 'axis' },
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params) => {
+        const mes = params[0]?.axisValue;
+        const indice = params[0]?.dataIndex;
+        const row = evolucionMensual[indice] || {};
+        const anterior = Number(row.unidadesAnioAnterior) || 0;
+        const actual = Number(row.unidades) || 0;
+        const reprocesos = Number(row.reprocesos) || 0;
+        const variacion = tooltipVariacionMensual({
+          anterior,
+          actual,
+          etiqueta: 'las unidades',
+          anioAnterior,
+          anioActual,
+        });
+
+        return [
+          `<strong>${mes}</strong>`,
+          `${anioAnterior}: ${number.format(anterior)} unidades`,
+          `${anioActual}: ${number.format(actual)} unidades`,
+          `Reprocesos: ${number.format(reprocesos)}`,
+          `<span style="color:${actual >= anterior ? '#15803d' : '#dc2626'}">Variación: ${variacion}</span>`,
+        ].join('<br/>');
+      },
+    },
     legend: { top: 0 },
     grid: { left: 45, right: 45, top: 40, bottom: 25 },
     xAxis: { type: 'category', data: MONTH_NAMES },
@@ -233,7 +276,30 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   // mes, aca suma 1, no 2 (a diferencia de "Evolución mensual" de arriba).
   const hayAnioAnteriorPlacas = evolucionMensualPlacas.some((row) => row.placasAnioAnterior > 0);
   const evolucionPlacasOption = {
-    tooltip: { trigger: 'axis' },
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params) => {
+        const mes = params[0]?.axisValue;
+        const indice = params[0]?.dataIndex;
+        const row = evolucionMensualPlacas[indice] || {};
+        const anterior = Number(row.placasAnioAnterior) || 0;
+        const actual = Number(row.placas) || 0;
+        const variacion = tooltipVariacionMensual({
+          anterior,
+          actual,
+          etiqueta: 'los vehículos únicos',
+          anioAnterior,
+          anioActual,
+        });
+
+        return [
+          `<strong>${mes}</strong>`,
+          `${anioAnterior}: ${number.format(anterior)} vehículos únicos`,
+          `${anioActual}: ${number.format(actual)} vehículos únicos`,
+          `<span style="color:${actual >= anterior ? '#15803d' : '#dc2626'}">Variación: ${variacion}</span>`,
+        ].join('<br/>');
+      },
+    },
     legend: { top: 0 },
     grid: { left: 45, right: 45, top: 40, bottom: 25 },
     xAxis: { type: 'category', data: MONTH_NAMES },
