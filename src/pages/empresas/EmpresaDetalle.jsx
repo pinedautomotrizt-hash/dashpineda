@@ -736,7 +736,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
             <Card
               label="Días promedio en taller"
               value={tiempoTaller.promedioDias !== null ? `${tiempoTaller.promedioDias} días` : 'Sin datos'}
-              hint={`Sobre ${number.format(tiempoTaller.otParaPromedio)} OT de máximo 1 día`}
+              //hint={`Sobre ${number.format(tiempoTaller.otParaPromedio)} OT de máximo 1 día`}
               icon={Clock}
               tone="amber"
             />
@@ -798,7 +798,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
                       key={row.tipoOt}
                       label={friendlyTipoOt(row.tipoOt)}
                       value={row.promedioDias !== null ? `${row.promedioDias} días` : 'Sin datos'}
-                      hint={`${number.format(row.otConCierre)} OT cerradas`}
+                      //hint={`${number.format(row.otConCierre)} OT cerradas`}
                       icon={icon}
                       tone={tone}
                     />
