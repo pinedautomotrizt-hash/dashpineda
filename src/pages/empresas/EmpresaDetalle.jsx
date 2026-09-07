@@ -191,6 +191,9 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   const [modalReprocesos, setModalReprocesos] = useState(false);
   const masRapidas = tiempoTaller.masRapidas || [];
   const masLentas = tiempoTaller.masLentas || [];
+  const tiposTiempoVisibles = tiempoTaller.porTipoOt.filter(
+    (row) => !/(REPROCESO|RECLAMO)/.test(String(row.tipoOt || '').toUpperCase()),
+  );
 
   const porServicioAgrupado = useMemo(() => {
     if (porServicio.length <= TOP_SERVICIOS) return porServicio;
@@ -733,7 +736,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
             <Card
               label="Días promedio en taller"
               value={tiempoTaller.promedioDias !== null ? `${tiempoTaller.promedioDias} días` : 'Sin datos'}
-              hint={`Sobre ${number.format(tiempoTaller.otParaPromedio)} OT de más de un día`}
+              hint={`Sobre ${number.format(tiempoTaller.otParaPromedio)} OT, excepto las de 1 día`}
               icon={Clock}
               tone="amber"
             />
@@ -782,13 +785,13 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
             </div>
           )}
 
-          {tiempoTaller.porTipoOt.length > 0 && (
+          {tiposTiempoVisibles.length > 0 && (
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Días promedio por tipo de servicio
               </p>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {tiempoTaller.porTipoOt.map((row) => {
+                {tiposTiempoVisibles.map((row) => {
                   const { icon, tone } = iconoPorTipoOt(row.tipoOt);
                   return (
                     <Card
