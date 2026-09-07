@@ -191,9 +191,12 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   const [modalReprocesos, setModalReprocesos] = useState(false);
   const masRapidas = tiempoTaller.masRapidas || [];
   const masLentas = tiempoTaller.masLentas || [];
-  const tiposTiempoVisibles = tiempoTaller.porTipoOt.filter(
-    (row) => !/(REPROCESO|RECLAMO)/.test(String(row.tipoOt || '').toUpperCase()),
-  );
+  const tiposTiempoVisibles = tiempoTaller.porTipoOt.filter((row) => (
+    [
+      'MANTENIMIENTO PERIODICO',
+      'CORRECTIVO Y REPARACIONES GENERALES',
+    ].includes(String(row.tipoOt || '').toUpperCase().trim())
+  ));
 
   const porServicioAgrupado = useMemo(() => {
     if (porServicio.length <= TOP_SERVICIOS) return porServicio;
@@ -790,7 +793,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Días promedio por tipo de servicio
               </p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mx-auto grid max-w-4xl gap-3 sm:grid-cols-2">
                 {tiposTiempoVisibles.map((row) => {
                   const { icon, tone } = iconoPorTipoOt(row.tipoOt);
                   return (
