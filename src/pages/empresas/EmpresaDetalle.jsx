@@ -334,14 +334,14 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   // calor en vez de otra barra mas (ya hay varios graficos de barras en esta
   // pagina): de un vistazo se ven los dias fuertes/flojos del mes, formato
   // mas cómodo para una presentación ejecutiva.
-  const maxPorDia = Math.max(1, ...porDia.map((row) => row.placas));
   const totalPorDia = porDia.reduce((sum, row) => sum + row.placas, 0);
   const porDiaOption = {
     tooltip: {
       formatter: (params) => {
         const [fecha, valor] = params.value;
         const [, , dia] = fecha.split('-');
-        return `<strong>${dia}/${filters.month.slice(5)}</strong><br/>${number.format(valor)} vehículo${valor === 1 ? '' : 's'}`;
+        const estado = valor === 0 ? 'Sin ingresos' : 'Con ingresos';
+        return `<strong>${dia}/${filters.month.slice(5)}</strong><br/>${number.format(valor)} vehículo${valor === 1 ? '' : 's'}<br/>${estado}`;
       },
     },
     // Texto del total del mes, al lado de la leyenda de colores.
@@ -360,21 +360,18 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
       },
     }],
     visualMap: {
-      min: 0,
-      max: maxPorDia,
       calculable: false,
       orient: 'horizontal',
       left: 'center',
       top: 0,
-      itemWidth: 12,
-      itemHeight: 90,
-      // Etiquetas de texto a los extremos de la barra: que se lea como
-      // leyenda (Menos/Más), no solo una franja de colores sin explicar.
-      text: ['Más', 'Menos'],
-      // Escala de varios colores (no un solo tono): el 0 ya arranca en un gris
-      // visible (no blanco puro) para que un día sin ingresos se vea como una
-      // celda con color, no como un hueco vacío.
-      inRange: { color: ['#e2e8f0', '#38bdf8', '#22c55e', '#facc15', '#f97316', '#dc2626'] },
+      itemWidth: 16,
+      itemHeight: 12,
+      // Rojo es alerta: ese día no ingresó ningún vehículo. Verde indica que
+      // sí hubo al menos un ingreso, independientemente de la cantidad.
+      pieces: [
+        { value: 0, label: 'Sin ingresos', color: '#ef4444' },
+        { gt: 0, label: 'Con ingresos', color: '#22c55e' },
+      ],
       textStyle: { color: '#64748b', fontSize: 11 },
     },
     calendar: {
