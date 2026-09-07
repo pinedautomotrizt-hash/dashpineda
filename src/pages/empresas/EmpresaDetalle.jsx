@@ -642,7 +642,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
         {/* 1. Resumen */}
         <section className={`grid gap-3 sm:grid-cols-2 ${MOSTRAR_CARD_REPROCESOS ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
           <Card
-            label="OT únicas"
+            label="OT Atendidas"
             value={number.format(resumen.unidades_ot)}
             hint="Órdenes de trabajo únicas en el periodo"
             icon={Building2}
