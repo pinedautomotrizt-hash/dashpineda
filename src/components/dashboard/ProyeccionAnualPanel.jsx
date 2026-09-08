@@ -253,7 +253,45 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
             <td className="px-3 py-1.5 text-right font-semibold text-slate-900">{money(alcanceAnual)}</td>
           </tr>
 
+          <tr className="border-t border-slate-100">
+            <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-medium text-slate-600">% Alcance</td>
+            {meses.map((mes) => {
+              const futuro = esFuturo(anio, mes);
+              const metaMes = metaDelMes(metaAnio, mes);
+              const porcentaje = futuro || !metaMes ? null : (valor(anio, mes) / metaMes) * 100;
+              return (
+                <td key={mes} className={`px-2 py-1.5 text-right ${toneAlcance(porcentaje)}`}>
+                  {porcentaje === null ? '—' : pct(porcentaje)}
+                </td>
+              );
+            })}
+            <td className={`px-3 py-1.5 text-right ${toneAlcance(metaAnual ? (alcanceAnual / metaAnual) * 100 : null)}`}>
+              {metaAnual ? pct((alcanceAnual / metaAnual) * 100) : '—'}
+            </td>
+          </tr>
+
+
+           {anioAnterior && (
+            <tr className="border-t border-slate-100 bg-slate-50/60">
+              <td className="sticky left-0 z-10 bg-slate-50/60 px-3 py-1.5 text-left font-medium text-slate-600">
+                Variación vs. {anioAnterior}
+              </td>
+              {meses.map((mes) => {
+                const anterior = valor(anioAnterior, mes);
+                const actual = esFuturo(anio, mes) ? null : valor(anio, mes);
+                const variacion = actual === null || !anterior ? null : ((actual - anterior) / anterior) * 100;
+                return (
+                  <td key={mes} className="px-2 py-1.5 text-right">
+                    <VariationBadge value={variacion} />
+                  </td>
+                );
+              })}
+              <td className="px-3 py-1.5" />
+            </tr>
+          )}
+
           
+
 
           {esAnioActual && (
             <>
@@ -297,42 +335,6 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
           
 
 
-
-
-          <tr className="border-t border-slate-100">
-            <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-medium text-slate-600">% Alcance</td>
-            {meses.map((mes) => {
-              const futuro = esFuturo(anio, mes);
-              const metaMes = metaDelMes(metaAnio, mes);
-              const porcentaje = futuro || !metaMes ? null : (valor(anio, mes) / metaMes) * 100;
-              return (
-                <td key={mes} className={`px-2 py-1.5 text-right ${toneAlcance(porcentaje)}`}>
-                  {porcentaje === null ? '—' : pct(porcentaje)}
-                </td>
-              );
-            })}
-            <td className={`px-3 py-1.5 text-right ${toneAlcance(metaAnual ? (alcanceAnual / metaAnual) * 100 : null)}`}>
-              {metaAnual ? pct((alcanceAnual / metaAnual) * 100) : '—'}
-            </td>
-          </tr>
-          {anioAnterior && (
-            <tr className="border-t border-slate-100 bg-slate-50/60">
-              <td className="sticky left-0 z-10 bg-slate-50/60 px-3 py-1.5 text-left font-medium text-slate-600">
-                Variación vs. {anioAnterior}
-              </td>
-              {meses.map((mes) => {
-                const anterior = valor(anioAnterior, mes);
-                const actual = esFuturo(anio, mes) ? null : valor(anio, mes);
-                const variacion = actual === null || !anterior ? null : ((actual - anterior) / anterior) * 100;
-                return (
-                  <td key={mes} className="px-2 py-1.5 text-right">
-                    <VariationBadge value={variacion} />
-                  </td>
-                );
-              })}
-              <td className="px-3 py-1.5" />
-            </tr>
-          )}
         </tbody>
       </table>
     </div>
