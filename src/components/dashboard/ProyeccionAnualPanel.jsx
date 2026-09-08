@@ -15,7 +15,6 @@ const DASH = '\u2014';
 const MES_INICIO_PROMEDIO_PROYECCION = 5;
 //Incremento del sector automotriz (Actual) Gerson 
 const INCREMENTO_TALLER_AUTOMOTRIZ = 0.05;
-const FACTOR_INCREMENTO_TALLER = 1 + INCREMENTO_TALLER_AUTOMOTRIZ;
 
 
 
@@ -198,9 +197,11 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
       ? (unidadesEstimadas(mes) || 0) * (ticketAcumulado || 0)
       : valor(anio, mes)
   );
+  // El mes actual conserva su proyecciÃ³n base. Cada mes posterior recibe
+  // exactamente el mismo incremento de 5%, sin acumularlo entre meses.
   const proyeccionConIncrementoMes = (mes) => (
-    esMesProyectado(mes)
-      ? proyeccionBaseMes(mes) * FACTOR_INCREMENTO_TALLER
+    esAnioActual && mes > mesActual
+      ? proyeccionBaseMes(mes) * (1 + INCREMENTO_TALLER_AUTOMOTRIZ)
       : proyeccionBaseMes(mes)
   );
   const proyeccionBaseAnual = meses.reduce((suma, mes) => suma + proyeccionBaseMes(mes), 0);
@@ -348,7 +349,7 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
           <span className="font-semibold">¿Cómo se calcula la proyección?</span>{' '}
           Suma el alcance real de los meses cerrados y, para el mes actual y los futuros, usa
           OT × ticket promedio acumulado. A esos meses proyectados se les aplica
-          el incremento de taller de 8.52%.
+          un incremento de 5% desde el mes siguiente.
         </div>
       )}
     </div>
