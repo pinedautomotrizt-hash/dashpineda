@@ -329,7 +329,7 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
                 <td className="px-3 py-1.5 text-right font-bold text-indigo-900">{money(proyeccionBaseAnual)}</td>
               </tr>
               <tr className="border-t border-indigo-100 bg-indigo-50/70">
-                <td className="sticky left-0 z-10 bg-indigo-50/70 px-3 py-1.5 text-left font-semibold text-indigo-950">Proyecci&oacute;n + 8.52%</td>
+                <td className="sticky left-0 z-10 bg-indigo-50/70 px-3 py-1.5 text-left font-semibold text-indigo-950">Proyecci&oacute;n + 5%</td>
                 {meses.map((mes) => (
                   <td key={mes} className="px-2 py-1.5 text-right font-semibold text-indigo-950">{money(proyeccionConIncrementoMes(mes))}</td>
                 ))}
