@@ -889,7 +889,7 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
                     <p className="mt-1 text-lg font-bold text-slate-950">{number.format(modeloTop.vehiculos || 0)}</p>
                   </div>
                   <div className="rounded-md bg-slate-50 p-3">
-                    <p className="text-slate-500">Unidades atendidas</p>
+                    <p className="text-slate-500">OT atendidas</p>
                     <p className="mt-1 text-lg font-bold text-slate-950">{number.format(modeloTop.unidades || 0)}</p>
                   </div>
                 </div>

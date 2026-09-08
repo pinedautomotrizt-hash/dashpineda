@@ -230,7 +230,7 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
             <td className="px-3 py-1.5 text-right font-semibold text-slate-600">{money(metaAnual)}</td>
           </tr>
           <tr className="border-t border-slate-100">
-            <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-medium text-slate-600">Unidades atendidas</td>
+            <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-medium text-slate-600">OT</td>
             {meses.map((mes) => (
               <td key={mes} className="px-2 py-1.5 text-right text-slate-900">
                 {esFuturo(anio, mes) ? '\u2014' : Number(unidades(anio, mes)).toLocaleString('es-PE')}
@@ -347,7 +347,7 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
         <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-xs leading-5 text-indigo-900">
           <span className="font-semibold">¿Cómo se calcula la proyección?</span>{' '}
           Suma el alcance real de los meses cerrados y, para el mes actual y los futuros, usa
-          unidades estimadas × ticket promedio acumulado. A esos meses proyectados se les aplica
+          OT × ticket promedio acumulado. A esos meses proyectados se les aplica
           el incremento de taller de 8.52%.
         </div>
       )}
