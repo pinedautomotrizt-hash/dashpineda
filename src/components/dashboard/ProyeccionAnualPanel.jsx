@@ -12,9 +12,13 @@ const mesActual = hoy.getMonth() + 1;
 const diasDelMesActual = new Date(anioActual, mesActual, 0).getDate();
 const diasTranscurridos = hoy.getDate();
 const DASH = '\u2014';
-const MES_INICIO_PROMEDIO_PROYECCION = 6;
+const MES_INICIO_PROMEDIO_PROYECCION = 5;
+//Incremento del sector automotriz (Actual) Gerson 
 const INCREMENTO_TALLER_AUTOMOTRIZ = 0.0852;
 const FACTOR_INCREMENTO_TALLER = 1 + INCREMENTO_TALLER_AUTOMOTRIZ;
+
+
+
 
 // La meta de un año puede ser un número fijo (misma meta los 12 meses) o un
 // arreglo de 12 valores cuando cambia dentro del año (ver metas.js backend).
