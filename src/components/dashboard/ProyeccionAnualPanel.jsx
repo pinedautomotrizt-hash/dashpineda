@@ -202,7 +202,10 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
   // exactamente el mismo incremento de 5%, sin acumularlo entre meses.
   const proyeccionConIncrementoMes = (mes) => (
     esAnioActual && mes >= MES_INICIO_INCREMENTO_PROYECCION
-      ? proyeccionBaseMes(mes) * (1 + INCREMENTO_TALLER_AUTOMOTRIZ)
+      ? proyeccionBaseMes(mes) * Math.pow(
+        1 + INCREMENTO_TALLER_AUTOMOTRIZ,
+        mes - MES_INICIO_INCREMENTO_PROYECCION + 1,
+      )
       : proyeccionBaseMes(mes)
   );
   const proyeccionBaseAnual = meses.reduce((suma, mes) => suma + proyeccionBaseMes(mes), 0);
@@ -350,7 +353,7 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
           <span className="font-semibold">¿Cómo se calcula la proyección?</span>{' '}
           Suma el alcance real de los meses cerrados y, para el mes actual y los futuros, usa
           OT × ticket promedio acumulado. A esos meses proyectados se les aplica
-          un incremento de 5% desde octubre.
+          un incremento acumulativo de 5% mensual desde octubre.
         </div>
       )}
     </div>
