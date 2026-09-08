@@ -207,7 +207,8 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
   const proyeccionConIncrementoAnual = meses.reduce((suma, mes) => suma + proyeccionConIncrementoMes(mes), 0);
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200">
+    <div className="space-y-3">
+      <div className="overflow-x-auto rounded-lg border border-slate-200">
       <table className="w-full min-w-[820px] border-collapse text-xs">
         <thead>
           <tr className="bg-slate-50 text-slate-500">
@@ -341,6 +342,15 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
 
         </tbody>
       </table>
+      </div>
+      {esAnioActual && (
+        <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-xs leading-5 text-indigo-900">
+          <span className="font-semibold">¿Cómo se calcula la proyección?</span>{' '}
+          Suma el alcance real de los meses cerrados y, para el mes actual y los futuros, usa
+          unidades estimadas × ticket promedio acumulado. A esos meses proyectados se les aplica
+          el incremento de taller de 8.52%.
+        </div>
+      )}
     </div>
   );
 }
