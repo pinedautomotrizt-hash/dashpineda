@@ -242,6 +242,19 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
             })}
             <td className="px-3 py-1.5 text-right font-semibold text-slate-900">{ticketAcumulado === null ? '\u2014' : money(ticketAcumulado)}</td>
           </tr>
+
+          <tr className="border-t border-slate-100">
+            <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-medium text-slate-600">Alcance</td>
+            {meses.map((mes) => (
+              <td key={mes} className="px-2 py-1.5 text-right text-slate-900">
+                {esFuturo(anio, mes) ? '—' : money(valor(anio, mes))}
+              </td>
+            ))}
+            <td className="px-3 py-1.5 text-right font-semibold text-slate-900">{money(alcanceAnual)}</td>
+          </tr>
+
+          
+
           {esAnioActual && (
             <>
               <tr className="border-t border-slate-100 bg-indigo-50/50">
@@ -264,6 +277,7 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
                 ))}
                 <td className="px-3 py-1.5 text-right font-semibold text-indigo-800">{ticketAcumulado === null ? DASH : money(ticketAcumulado)}</td>
               </tr>
+
               <tr className="border-t border-indigo-100 bg-indigo-50/50">
                 <td className="sticky left-0 z-10 bg-indigo-50/50 px-3 py-1.5 text-left font-semibold text-indigo-900">Proyecci&oacute;n base</td>
                 {meses.map((mes) => (
@@ -280,15 +294,11 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
               </tr>
             </>
           )}
-          <tr className="border-t border-slate-100">
-            <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-medium text-slate-600">Alcance</td>
-            {meses.map((mes) => (
-              <td key={mes} className="px-2 py-1.5 text-right text-slate-900">
-                {esFuturo(anio, mes) ? '—' : money(valor(anio, mes))}
-              </td>
-            ))}
-            <td className="px-3 py-1.5 text-right font-semibold text-slate-900">{money(alcanceAnual)}</td>
-          </tr>
+          
+
+
+
+
           <tr className="border-t border-slate-100">
             <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-medium text-slate-600">% Alcance</td>
             {meses.map((mes) => {
