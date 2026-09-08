@@ -14,7 +14,7 @@ const diasTranscurridos = hoy.getDate();
 const DASH = '\u2014';
 const MES_INICIO_PROMEDIO_PROYECCION = 5;
 //Incremento del sector automotriz (Actual) Gerson 
-const INCREMENTO_TALLER_AUTOMOTRIZ = 0.0852;
+const INCREMENTO_TALLER_AUTOMOTRIZ = 0.05;
 const FACTOR_INCREMENTO_TALLER = 1 + INCREMENTO_TALLER_AUTOMOTRIZ;
 
 
