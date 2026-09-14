@@ -14,14 +14,14 @@ const COLOR_SEDE = {
 };
 const colorSede = (sede) => COLOR_SEDE[sede] || '#64748b';
 
-// Los reprocesos suelen ser menos del 1% de la facturación: con un solo
-// decimal casi todo se vería como 0.5%, por eso aquí se muestran dos.
-const pct2 = (value) => (value === null || value === undefined ? '—' : `${Number(value).toFixed(2)}%`);
+// División real reprocesos ÷ facturación, sin pasarla a porcentaje. Se
+// muestran 6 decimales para no perder los ceros: 5,978 ÷ 1,091,820 = 0.005475.
+const division = (value) => (value === null || value === undefined ? '—' : Number(value).toFixed(6));
 
 const montoCorto = (value) => (value >= 1000 ? `${Math.round(value / 1000)}k` : `${Math.round(value)}`);
 
 // Balance anual de reprocesos: cuánto suman las OT de reproceso de cada año y
-// qué porcentaje representan de la facturación oficial sin IGV de ese año,
+// cuánto representan de la facturación oficial sin IGV de ese año (división),
 // por sede. Recibe la data ya cargada por ProyeccionAnualPanel.
 export default function ReprocesosAnualPanel({ filas, reprocesos, loading }) {
   const resumen = useMemo(() => {
@@ -49,7 +49,7 @@ export default function ReprocesosAnualPanel({ filas, reprocesos, loading }) {
         facturado: totalFacturado,
         monto,
         ots: Number(fila?.ots || 0),
-        porcentaje: totalFacturado ? (monto / totalFacturado) * 100 : null,
+        proporcion: totalFacturado ? monto / totalFacturado : null,
       };
     };
 
@@ -87,12 +87,12 @@ export default function ReprocesosAnualPanel({ filas, reprocesos, loading }) {
     [sedes, anios, celda],
   );
 
-  const opcionPorcentaje = useMemo(
+  const opcionDivision = useMemo(
     () => ({
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
-        valueFormatter: (value) => pct2(value),
+        valueFormatter: (value) => division(value),
       },
       legend: { top: 0, right: 0, textStyle: { fontSize: 11 } },
       grid: { left: 50, right: 15, top: 40, bottom: 25 },
@@ -100,7 +100,7 @@ export default function ReprocesosAnualPanel({ filas, reprocesos, loading }) {
       yAxis: {
         type: 'value',
         splitLine: { lineStyle: { color: '#f1f5f9' } },
-        axisLabel: { formatter: (value) => `${value}%` },
+        axisLabel: { formatter: (value) => Number(value).toFixed(3) },
       },
       series: sedes.map((sede) => ({
         name: sede,
@@ -108,8 +108,8 @@ export default function ReprocesosAnualPanel({ filas, reprocesos, loading }) {
         barMaxWidth: 32,
         barGap: '90%',
         itemStyle: { color: colorSede(sede), borderRadius: [4, 4, 0, 0] },
-        label: { show: true, position: 'top', fontSize: 11, color: '#334155', formatter: ({ value }) => pct2(value) },
-        data: anios.map((anio) => celda(sede, anio).porcentaje),
+        label: { show: true, position: 'top', fontSize: 11, color: '#334155', formatter: ({ value }) => division(value) },
+        data: anios.map((anio) => celda(sede, anio).proporcion),
       })),
     }),
     [sedes, anios, celda],
@@ -119,7 +119,7 @@ export default function ReprocesosAnualPanel({ filas, reprocesos, loading }) {
     <section className="mb-4">
       <Panel
         title="Reprocesos vs. facturación anual"
-        right={<span className="text-xs text-slate-500">Valor sin IGV de OT de reproceso · % sobre la facturación oficial del año</span>}
+        right={<span className="text-xs text-slate-500">Valor sin IGV de OT de reproceso · reprocesos ÷ facturación oficial del año</span>}
       >
         <div className="relative">
           <LoadingOverlay show={loading} />
@@ -140,7 +140,7 @@ export default function ReprocesosAnualPanel({ filas, reprocesos, loading }) {
                         <th className="px-3 py-2 text-right font-semibold">Facturación</th>
                         <th className="px-3 py-2 text-right font-semibold">Reprocesos</th>
                         <th className="px-3 py-2 text-right font-semibold">OT</th>
-                        <th className="px-3 py-2 text-right font-semibold">% reproceso</th>
+                        <th className="px-3 py-2 text-right font-semibold">Reproceso ÷ facturación</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -152,7 +152,7 @@ export default function ReprocesosAnualPanel({ filas, reprocesos, loading }) {
                             <td className="px-3 py-2 text-right text-slate-600">{money(datos.facturado)}</td>
                             <td className="px-3 py-2 text-right font-semibold text-slate-900">{money(datos.monto)}</td>
                             <td className="px-3 py-2 text-right text-slate-600">{number.format(datos.ots)}</td>
-                            <td className="px-3 py-2 text-right font-semibold text-slate-900">{pct2(datos.porcentaje)}</td>
+                            <td className="px-3 py-2 text-right font-semibold text-slate-900">{division(datos.proporcion)}</td>
                           </tr>
                         );
                       })}
@@ -172,9 +172,9 @@ export default function ReprocesosAnualPanel({ filas, reprocesos, loading }) {
                 </div>
               </div>
               <div className="min-w-0">
-                <p className="mb-1 text-xs font-semibold text-slate-600">Reprocesos como % de la facturación del año</p>
+                <p className="mb-1 text-xs font-semibold text-slate-600">Reprocesos ÷ facturación del año</p>
                 <div className="h-[240px] sm:h-[280px]">
-                  <ReactECharts option={opcionPorcentaje} style={{ height: '100%' }} notMerge lazyUpdate />
+                  <ReactECharts option={opcionDivision} style={{ height: '100%' }} notMerge lazyUpdate />
                 </div>
               </div>
             </div>
