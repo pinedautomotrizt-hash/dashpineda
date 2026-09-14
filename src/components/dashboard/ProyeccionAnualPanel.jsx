@@ -5,6 +5,7 @@ import { Panel, LoadingOverlay, VariationBadge } from './DashboardPrimitives';
 import { money, pct } from '../../utils/formatters';
 import { MONTH_NAMES } from '../../config/appConfig';
 import { api } from '../../api';
+import ReprocesosAnualPanel from './ReprocesosAnualPanel';
 
 const hoy = new Date();
 const anioActual = hoy.getFullYear();
@@ -80,31 +81,34 @@ export default function ProyeccionAnualPanel() {
   const sedes = Object.keys(metas);
 
   return (
-    <section className="mb-4">
-      <Panel
-        title="Proyección anual por sede"
-        right={<span className="text-xs text-slate-500">Facturación oficial sin IGV vs. meta · 2025-2026</span>}
-      >
-        {error && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>}
-        <div className="relative">
-          <LoadingOverlay show={loading} />
-          <div className="space-y-8">
-            {sedes.map((sede) => (
-              <SedeProyeccion
-                key={sede}
-                sede={sede}
-                metasPorAnio={metas[sede]}
-                facturadoPorCelda={facturadoPorCelda}
-                unidadesPorCelda={unidadesPorCelda}
-              />
-            ))}
-            {!loading && !sedes.length && (
-              <div className="grid h-40 place-items-center text-sm text-slate-500">Sin metas configuradas.</div>
-            )}
+    <>
+      <section className="mb-4">
+        <Panel
+          title="Proyección anual por sede"
+          right={<span className="text-xs text-slate-500">Facturación oficial sin IGV vs. meta · 2025-2026</span>}
+        >
+          {error && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>}
+          <div className="relative">
+            <LoadingOverlay show={loading} />
+            <div className="space-y-8">
+              {sedes.map((sede) => (
+                <SedeProyeccion
+                  key={sede}
+                  sede={sede}
+                  metasPorAnio={metas[sede]}
+                  facturadoPorCelda={facturadoPorCelda}
+                  unidadesPorCelda={unidadesPorCelda}
+                />
+              ))}
+              {!loading && !sedes.length && (
+                <div className="grid h-40 place-items-center text-sm text-slate-500">Sin metas configuradas.</div>
+              )}
+            </div>
           </div>
-        </div>
-      </Panel>
-    </section>
+        </Panel>
+      </section>
+      <ReprocesosAnualPanel filas={data?.filas || []} reprocesos={data?.reprocesos || []} loading={loading} />
+    </>
   );
 }
 
