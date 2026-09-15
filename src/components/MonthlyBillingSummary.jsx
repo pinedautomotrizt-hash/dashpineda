@@ -205,11 +205,29 @@ export default function MonthlyBillingSummary({ data, filters, error, advisorCon
 
       <div className="relative">
       <LoadingOverlay show={filters.loading} />
-      <section className="no-print mb-5 grid gap-3 sm:grid-cols-2">
+      <section className="no-print mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 shadow-sm">
           <p className="text-sm font-medium text-blue-700">Total principal del avance</p>
           <p className="mt-2 text-3xl font-bold tracking-tight text-blue-950">{formatMoney(totalPrincipal)}</p>
           <p className="mt-2 text-xs text-blue-700">No incluye ventas de Mostrador.</p>
+        </div>
+        {/* Suma directa del Registro de Venta por Local, sin reglas de estado:
+            es el número que sale al sumar el Excel, para poder cuadrarlo. */}
+        <div className="rounded-lg border border-slate-300 bg-slate-50 p-4 shadow-sm">
+          <p className="text-sm font-medium text-slate-700">Total general de avance sin estado</p>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950">{formatMoney(data?.sinEstado?.sin_igv)}</p>
+          <div className="mt-2 space-y-0.5 text-xs text-slate-700">
+            {(data?.sinEstado?.porLocal || []).map((row) => (
+              <div key={row.local_nombre} className="flex justify-between gap-3">
+                <span>{row.local_nombre}</span>
+                <span className="font-semibold tabular-nums">{formatMoney(row.sin_igv)}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-slate-500">
+            Suma completa del Registro de Venta por local: incluye pendientes de SUNAT, anulados, Mostrador y Pagos varios.
+            Diferencia con el total principal: {formatMoney(Number(data?.sinEstado?.sin_igv || 0) - totalPrincipal)}.
+          </p>
         </div>
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
           <p className="text-sm font-medium text-amber-700">Venta de repuestos / Mostrador</p>
