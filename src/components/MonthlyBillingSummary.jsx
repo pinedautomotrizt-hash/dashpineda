@@ -224,10 +224,6 @@ export default function MonthlyBillingSummary({ data, filters, error, advisorCon
               </div>
             ))}
           </div>
-          <p className="mt-2 text-xs text-slate-500">
-            Suma completa del Registro de Venta por local: incluye pendientes de SUNAT, anulados, Mostrador y Pagos varios.
-            Diferencia con el total principal: {formatMoney(Number(data?.sinEstado?.sin_igv || 0) - totalPrincipal)}.
-          </p>
         </div>
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
           <p className="text-sm font-medium text-amber-700">Venta de repuestos / Mostrador</p>
