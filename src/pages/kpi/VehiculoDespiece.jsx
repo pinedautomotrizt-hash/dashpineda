@@ -132,11 +132,11 @@ export default function VehiculoDespiece({ resumen, muestraMinima, seleccionado,
                 {fila.label.length > 16 ? `${fila.label.slice(0, 15)}…` : fila.label}
               </text>
               <text x={tx + 56} y={ty + 40} fontSize="14" fontWeight="700" fill="#0f172a">
-                {fila.mttf ? `${Math.round(fila.mttf / 1000)}k km` : 'Sin datos'}
+                {fila.mttf ? `${Math.round(fila.mttf / 1000)}k km` : '—'}
               </text>
               <circle cx={tx + 60} cy={ty + 52} r="3.5" fill={estado.color} />
               <text x={tx + 68} y={ty + 55} fontSize="9" fill="#64748b">
-                {fila.n ? `${fila.n} ${fila.n === 1 ? 'medición' : 'mediciones'}` : 'sin muestra'}
+                {fila.n ? `${fila.n} ${fila.n === 1 ? 'medición' : 'mediciones'}` : '—'}
               </text>
             </g>
           </g>

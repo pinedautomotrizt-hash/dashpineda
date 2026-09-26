@@ -7,6 +7,7 @@ import { api } from '../api';
 export default function useKpiData() {
   const [local, setLocal] = useState('Todos');
   const [soloFlota, setSoloFlota] = useState(true);
+  const [empresa, setEmpresa] = useState('Todas');
   const [seleccionado, setSeleccionado] = useState(null);
 
   const [locales, setLocales] = useState([]);
@@ -17,7 +18,7 @@ export default function useKpiData() {
   const [loadingDetalle, setLoadingDetalle] = useState(false);
   const [error, setError] = useState('');
 
-  const params = useMemo(() => ({ local, soloFlota }), [local, soloFlota]);
+  const params = useMemo(() => ({ local, soloFlota, empresa }), [local, soloFlota, empresa]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -65,6 +66,7 @@ export default function useKpiData() {
   return {
     local, setLocal,
     soloFlota, setSoloFlota,
+    empresa, setEmpresa,
     seleccionado, setSeleccionado,
     locales, resumen, detalle,
     loading, loadingDetalle, error, load,

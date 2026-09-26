@@ -24,8 +24,8 @@ export function estadoMuestra(fila, muestraMinima) {
   if (!fila || !fila.n) {
     return {
       id: 'sin-datos',
-      label: 'Sin datos',
-      detalle: 'Ningún vehículo ha reemplazado esta pieza dos veces todavía.',
+      label: '—',
+      detalle: '—',
       color: '#94a3b8',
       chip: 'bg-slate-100 text-slate-600',
       borde: 'border-slate-200',
@@ -35,7 +35,7 @@ export function estadoMuestra(fila, muestraMinima) {
     return {
       id: 'insuficiente',
       label: 'Muestra insuficiente',
-      detalle: `Solo ${fila.n} ${fila.n === 1 ? 'medición' : 'mediciones'}. Sirve como señal, no para decidir compras.`,
+      detalle: `${fila.n} ${fila.n === 1 ? 'medición' : 'mediciones'}`,
       color: '#d97706',
       chip: 'bg-amber-50 text-amber-700',
       borde: 'border-amber-200',
@@ -44,44 +44,12 @@ export function estadoMuestra(fila, muestraMinima) {
   return {
     id: 'confiable',
     label: 'Muestra suficiente',
-    detalle: `${fila.n} mediciones respaldan este valor.`,
+    detalle: `${fila.n} mediciones`,
     color: '#059669',
     chip: 'bg-emerald-50 text-emerald-700',
     borde: 'border-emerald-200',
   };
 }
-
-// Textos didacticos: el modulo se usa por gente de taller, no por analistas.
-export const GLOSARIO = Object.freeze([
-  {
-    termino: 'Vida útil media (MTTF)',
-    definicion:
-      'Promedio de kilómetros que aguanta la pieza entre un cambio y el siguiente. Sirve para estimar cuánto stock comprar al año.',
-  },
-  {
-    termino: 'Mediana',
-    definicion:
-      'El valor del medio: la mitad de las piezas duró menos y la mitad más. Es más representativo que el promedio cuando hay casos extremos.',
-  },
-  {
-    termino: 'Vida B10',
-    definicion:
-      'Kilometraje al que el 10% de las piezas ya se reemplazó. Es el número con el que se programa el mantenimiento preventivo: si programas al promedio, la mitad de la flota llega con la pieza gastada.',
-  },
-  {
-    termino: 'Mediciones (n)',
-    definicion:
-      'Cuántos intervalos reales respaldan el cálculo. Cada intervalo es un vehículo que cambió la misma pieza dos veces.',
-  },
-]);
-
-export const COMO_SE_CALCULA = Object.freeze([
-  'Se toma cada OT donde se facturó la pieza como repuesto (no la mano de obra).',
-  'Se agrupan por placa y se ordenan por fecha de apertura.',
-  'El kilómetro de una OT es el inicial; el de la siguiente OT con la misma pieza es el final.',
-  'La resta es la vida útil de esa pieza en ese vehículo.',
-  'Se descartan los intervalos con odómetro inválido y se reportan aparte.',
-]);
 
 export function kmText(valor) {
   if (valor === null || valor === undefined) return '—';

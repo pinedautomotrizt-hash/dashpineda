@@ -125,30 +125,16 @@ export default function RepuestoDetalle({ detalle, cargando, onCerrar }) {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Metrica
-            label="Vida B10 — para programar"
-            valor={kmText(resumen.b10)}
-            ayuda="Al llegar a este kilometraje, 1 de cada 10 ya necesitó el cambio."
-            destacado
-          />
-          <Metrica label="Mediana" valor={kmText(resumen.mediana)} ayuda="La mitad duró menos, la mitad más." />
-          <Metrica label="Vida útil media (MTTF)" valor={kmText(resumen.mttf)} ayuda="Para estimar consumo anual y stock." />
+          <Metrica label="Vida B10" valor={kmText(resumen.b10)} destacado />
+          <Metrica label="Mediana" valor={kmText(resumen.mediana)} />
+          <Metrica label="Vida útil media" valor={kmText(resumen.mttf)} />
           <Metrica
             label="Dispersión"
             valor={resumen.desv ? `± ${kmText(resumen.desv)}` : '—'}
-            ayuda={resumen.min ? `Rango real: ${kmText(resumen.min)} a ${kmText(resumen.max)}.` : null}
+            ayuda={resumen.min ? `${kmText(resumen.min)} a ${kmText(resumen.max)}` : null}
           />
         </div>
 
-        {repuesto.vidaRef && resumen.mttf ? (
-          <p className="mt-3 text-xs text-slate-500">
-            Referencia del fabricante: <strong>{kmText(repuesto.vidaRef)}</strong>. Tu flota rinde{' '}
-            <strong style={{ color: resumen.mttf >= repuesto.vidaRef ? '#059669' : '#dc2626' }}>
-              {Math.round((resumen.mttf / repuesto.vidaRef) * 100)}%
-            </strong>{' '}
-            de ese valor. Una diferencia grande apunta a condiciones de uso severas o a calidad del repuesto.
-          </p>
-        ) : null}
       </Panel>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -156,16 +142,13 @@ export default function RepuestoDetalle({ detalle, cargando, onCerrar }) {
           {histograma.length ? (
             <ReactECharts option={histogramaOption} style={{ height: 260 }} notMerge />
           ) : (
-            <p className="py-10 text-center text-sm text-slate-500">Sin mediciones para graficar.</p>
+            <p className="py-10 text-center text-sm text-slate-500">—</p>
           )}
-          <p className="mt-2 text-xs text-slate-500">
-            Mientras más ancha la distribución, menos confiable es programar por el promedio.
-          </p>
         </Panel>
 
         <Panel title="Por marca y modelo">
           <TablaSimple
-            vacio="Sin mediciones por modelo."
+            vacio="—"
             columnas={[
               { key: 'modelo', label: 'Vehículo', render: (f) => `${f.marca} ${f.modelo}`, className: 'font-medium text-slate-800' },
               { key: 'n', label: 'Mediciones', align: 'right' },
@@ -180,7 +163,7 @@ export default function RepuestoDetalle({ detalle, cargando, onCerrar }) {
       {porVariante.length > 1 && (
         <Panel title="Delantero vs. posterior">
           <TablaSimple
-            vacio="Sin desglose."
+            vacio="—"
             columnas={[
               { key: 'variante', label: 'Eje', className: 'font-medium text-slate-800' },
               { key: 'n', label: 'Mediciones', align: 'right' },
@@ -190,9 +173,6 @@ export default function RepuestoDetalle({ detalle, cargando, onCerrar }) {
             ]}
             filas={porVariante.map((f) => ({ ...f, key: f.variante }))}
           />
-          <p className="mt-2 text-xs text-slate-500">
-            Un eje desgasta distinto que el otro: compararlos mezclados acorta el intervalo aparente.
-          </p>
         </Panel>
       )}
 
@@ -201,7 +181,7 @@ export default function RepuestoDetalle({ detalle, cargando, onCerrar }) {
         right={<span className="text-xs text-slate-500">{codigos.length} códigos distintos</span>}
       >
         <TablaSimple
-          vacio="Sin códigos registrados."
+          vacio="—"
           columnas={[
             { key: 'codigo', label: 'Código', className: 'font-mono text-xs font-semibold text-slate-900' },
             { key: 'descripcion', label: 'Descripción', className: 'text-slate-600' },
@@ -222,10 +202,6 @@ export default function RepuestoDetalle({ detalle, cargando, onCerrar }) {
           title="Intervalos descartados"
           right={<span className="text-xs text-amber-700">{descartados.length} casos</span>}
         >
-          <p className="mb-3 text-xs text-slate-500">
-            No entran al cálculo porque el odómetro no es confiable. Se listan para que se pueda corregir la
-            captura en recepción, no para ocultarlos.
-          </p>
           <TablaSimple
             vacio=""
             columnas={[
