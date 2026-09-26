@@ -6,6 +6,7 @@ import DashboardPage from '../pages/dashboard/DashboardPage';
 import AsesoresPage from '../pages/asesores/AsesoresPage';
 import EmpresasPage from '../pages/empresas/EmpresasPage';
 import EmpresaDetallePage from '../pages/empresas/EmpresaDetallePage';
+import KpiPage from '../pages/kpi/KpiPage';
 import AsesorPersonalPage from '../pages/asesor-personal/AsesorPersonalPage';
 import AjustesPage from '../pages/ajustes/AjustesPage';
 import ImportacionesPage from '../pages/importaciones/ImportacionesPage';
@@ -29,6 +30,7 @@ export default function AppRouter() {
             <Route path={APP_PATHS.asesores} element={<ProtectedRoute><AsesoresPage /></ProtectedRoute>} />
             <Route path={APP_PATHS.empresas} element={<ProtectedRoute><EmpresasPage /></ProtectedRoute>} />
             <Route path={APP_PATHS.empresaDetalle} element={<ProtectedRoute><EmpresaDetallePage /></ProtectedRoute>} />
+            <Route path={APP_PATHS.kpi} element={<ProtectedRoute><KpiPage /></ProtectedRoute>} />
             <Route path={APP_PATHS.asesorPersonal} element={<ProtectedRoute><AsesorPersonalPage /></ProtectedRoute>} />
             <Route path={APP_PATHS.ajustes} element={<ProtectedRoute><AjustesPage /></ProtectedRoute>} />
             <Route
