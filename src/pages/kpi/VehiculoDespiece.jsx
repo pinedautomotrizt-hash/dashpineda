@@ -32,9 +32,11 @@ export default function VehiculoDespiece({ resumen, muestraMinima, seleccionado,
   const porId = Object.fromEntries((resumen || []).map((fila) => [fila.id, fila]));
 
   return (
+    // El SVG escala su tipografia junto con el viewBox: sin un tope de ancho,
+    // el texto de las tarjetas se ve desproporcionado en pantallas grandes.
     <svg
       viewBox="0 0 760 380"
-      className="h-auto w-full"
+      className="mx-auto h-auto w-full max-w-[920px]"
       role="img"
       aria-label="Despiece del vehículo con la vida útil de cada repuesto"
     >

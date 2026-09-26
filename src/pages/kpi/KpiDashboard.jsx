@@ -101,7 +101,13 @@ export default function KpiDashboard({ data, detalle, filters, error }) {
   const sinMuestra = resumen.filter((fila) => !fila.confiable).length;
 
   return (
-    <div className="relative space-y-5 p-4 lg:p-6">
+    // Mismo contenedor que el resto de modulos: deja libre el ancho del sidebar
+    // en escritorio y el alto de la barra superior en movil.
+    <div
+      className={`relative mx-auto max-w-[1440px] space-y-5 px-4 pb-5 pt-[4.5rem] transition-all duration-200 sm:px-6 lg:px-8 lg:pt-5 ${
+        filters.sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+      }`}
+    >
       <LoadingOverlay show={loading} label="Calculando vida útil…" />
 
       <header>
