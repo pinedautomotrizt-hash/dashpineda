@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Banknote, Building2, CalendarDays, Download, FileUp, Gauge, LayoutDashboard, LogOut, Menu, Settings, Users, X } from 'lucide-react';
+import { CalendarCheck, Banknote, Building2, CalendarDays, Download, FileUp, Gauge, LayoutDashboard, LogOut, Menu, PhoneCall, Settings, Users, X } from 'lucide-react';
 import PinedaLogo from './PinedaLogo';
-import { APP_MODULES, APP_PATHS } from '../../config/appConfig';
+import { APP_MODULES, APP_PATHS, puedeUsarRuta } from '../../config/appConfig';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
 
-const icons = { gauge: Gauge, banknote: Banknote, calendar: CalendarDays, dashboard: LayoutDashboard, users: Users, building: Building2, upload: FileUp, download: Download, settings: Settings };
+const icons = { phone: PhoneCall, calendarCheck: CalendarCheck, gauge: Gauge, banknote: Banknote, calendar: CalendarDays, dashboard: LayoutDashboard, users: Users, building: Building2, upload: FileUp, download: Download, settings: Settings };
 
 // Contenido compartido por el sidebar de escritorio y el drawer movil: mismos
 // links, mismo bloque de usuario/logout, solo cambia el contenedor que lo envuelve.
@@ -18,11 +18,9 @@ function NavContent({ modules, activePath, collapsed, usuario, logout, onNavigat
           const Icon = icons[icon];
           // Roles restringidos (EMPRESAS, ASESOR_INDIVIDUAL): el link sigue en
           // el menu (a proposito, para que se vea que existen otros modulos)
-          // pero no navega a ningun lado. Asesor/Ajustes son los dos modulos
-          // que si puede usar el rol ASESOR_INDIVIDUAL.
-          const disabled =
-            (usuario?.rol === 'EMPRESAS' && path !== APP_PATHS.empresas) ||
-            (usuario?.rol === 'ASESOR_INDIVIDUAL' && path !== APP_PATHS.asesorPersonal && path !== APP_PATHS.ajustes);
+          // pero no navega a ningun lado. Que modulos si puede usar cada rol lo
+          // define RUTAS_POR_ROL_RESTRINGIDO en appConfig.
+          const disabled = !puedeUsarRuta(usuario?.rol, path);
           if (disabled) {
             return (
               <span

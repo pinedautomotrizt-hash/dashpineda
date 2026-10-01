@@ -17,6 +17,9 @@ export default function ImportacionesContent() {
   const [historial, setHistorial] = useState([]);
   const [loadingHistorial, setLoadingHistorial] = useState(true);
   const isDetalleOt = importType === 'detalle_factura_ot';
+  // El reporte de seguimiento solo lo exporta el ERP en xlsx: la sede va en la
+  // cabecera del archivo, no en una columna, y el CSV la pierde.
+  const isSeguimiento = importType === 'seguimiento_mantenimiento';
 
   async function cargarHistorial() {
     setLoadingHistorial(true);
@@ -105,31 +108,38 @@ export default function ImportacionesContent() {
                 <option value="registro_venta">Registro de Venta por Local</option>
                 <option value="ordenes_trabajo">Ordenes de trabajo</option>
                 <option value="detalle_factura_ot">Detalle de facturas por OT</option>
+                <option value="seguimiento_mantenimiento">Seguimiento de mantenimientos</option>
               </select>
             </label>
 
             <label className="block rounded-lg border-2 border-dashed border-blue-200 bg-blue-50/60 p-5 text-center transition hover:border-blue-400 hover:bg-blue-50">
               <FileUp className="mx-auto text-blue-700" size={30} />
               <span className="mt-3 block text-sm font-semibold text-slate-950">
-                {file ? file.name : 'Selecciona tu archivo CSV'}
+                {file ? file.name : `Selecciona tu archivo ${isSeguimiento ? 'Excel' : 'CSV'}`}
               </span>
               <span className="mt-1 block text-xs text-slate-500">
-                {isDetalleOt
-                  ? 'Formato csv. El local y el periodo se detectan automáticamente.'
-                  : 'Formato csv'}
+                {isSeguimiento
+                  ? 'Solo formato xlsx. La sede y el periodo se leen del propio reporte.'
+                  : isDetalleOt
+                    ? 'Formato csv. El local y el periodo se detectan automáticamente.'
+                    : 'Formato csv'}
               </span>
               <input
                 className="sr-only"
                 type="file"
-                accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+                accept={isSeguimiento
+                  ? '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                  : '.xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv'}
                 onChange={(event) => setFile(event.target.files?.[0] || null)}
               />
             </label>
 
             <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-              {isDetalleOt
-                ? 'Usa el reporte “Detalle de Facturas de OT por Local”, en CSV. Puedes cargar Callao y Trujillo por separado; el sistema conserva ambas sedes.'
-                : 'Puedes usar el CSV con separador punto y coma. En ambos se ignoran las primeras 5 filas y se aplican las mismas reglas contra duplicados.'}
+              {isSeguimiento
+                ? 'Usa el reporte “Seguimiento de Mantenimientos” (RepManVehVen) en xlsx. El archivo es acumulativo: vuelve a subirlo cuantas veces quieras, se actualizan los que ya figuran y se agregan los nuevos, sin duplicar.'
+                : isDetalleOt
+                  ? 'Usa el reporte “Detalle de Facturas de OT por Local”, en CSV. Puedes cargar Callao y Trujillo por separado; el sistema conserva ambas sedes.'
+                  : 'Puedes usar el CSV con separador punto y coma. En ambos se ignoran las primeras 5 filas y se aplican las mismas reglas contra duplicados.'}
             </div>
 
             <button
@@ -137,7 +147,7 @@ export default function ImportacionesContent() {
               disabled={loading}
             >
               <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-              {loading ? 'Importando...' : 'Importar CSV'}
+              {loading ? 'Importando...' : `Importar ${isSeguimiento ? 'Excel' : 'CSV'}`}
             </button>
           </form>
         </Panel>

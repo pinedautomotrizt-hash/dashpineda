@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { APP_PATHS } from '../config/appConfig';
+import { APP_PATHS, puedeUsarRuta, rutaInicio } from '../config/appConfig';
 
 // Exige sesion iniciada y, si se pasa `roles`, restringe por rol (ADMIN/ASESOR).
 // Mientras se confirma la sesion (GET /auth/me al cargar la app) no redirige
@@ -19,19 +19,11 @@ export default function ProtectedRoute({ roles, children }) {
   if (roles && !roles.includes(usuario?.rol)) {
     return <Navigate to={APP_PATHS.facturacion} replace />;
   }
-  // Rol restringido: solo puede navegar dentro del modulo Empresas (lista y
-  // detalle de cada empresa). Cualquier otra ruta lo devuelve para alla.
-  if (usuario?.rol === 'EMPRESAS' && !location.pathname.startsWith(APP_PATHS.empresas)) {
-    return <Navigate to={APP_PATHS.empresas} replace />;
-  }
-  // Mismo criterio para ASESOR_INDIVIDUAL: solo su propio modulo Asesor y la
-  // pagina de Ajustes (donde vive el toggle de modo oscuro).
-  if (
-    usuario?.rol === 'ASESOR_INDIVIDUAL'
-    && !location.pathname.startsWith(APP_PATHS.asesorPersonal)
-    && !location.pathname.startsWith(APP_PATHS.ajustes)
-  ) {
-    return <Navigate to={APP_PATHS.asesorPersonal} replace />;
+  // Roles restringidos (EMPRESAS, ASESOR_INDIVIDUAL): solo navegan dentro de
+  // los modulos que les toca. Cualquier otra ruta los devuelve a su inicio.
+  // La lista es la misma que deshabilita los links del menu.
+  if (!puedeUsarRuta(usuario?.rol, location.pathname)) {
+    return <Navigate to={rutaInicio(usuario?.rol)} replace />;
   }
   return children;
 }

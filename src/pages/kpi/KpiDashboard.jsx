@@ -1,9 +1,13 @@
-import React from 'react';
-import { BookOpen, Building2, Gauge, Layers, RefreshCw, TriangleAlert } from 'lucide-react';
+import React, { Suspense, lazy, useState } from 'react';
+import { BookOpen, Box, Building2, Gauge, Layers, RefreshCw, Square, TriangleAlert } from 'lucide-react';
 import { Card, Panel, LoadingOverlay } from '../../components/dashboard/DashboardPrimitives';
 import { number } from '../../utils/formatters';
 import RepuestoIcono from './RepuestoIcono';
 import VehiculoDespiece from './VehiculoDespiece';
+
+// three.js pesa lo suyo: la vista 3D se carga solo cuando se pide, para no
+// sumarla al bundle de quien nunca la abre.
+const VehiculoDespiece3D = lazy(() => import('./VehiculoDespiece3D'));
 import RepuestoDetalle from './RepuestoDetalle';
 import { estadoMuestra, kmText, zonaColor, zonaLabel } from './kpiLabels';
 
@@ -164,11 +168,19 @@ export default function KpiDashboard({ data, detalle, filters, error }) {
     seleccionado, setSeleccionado, loading, loadingDetalle, load,
   } = filters;
 
+  const [vista, setVista] = useState('2d');
+
   const resumen = data?.resumen || [];
   const totales = data?.totales || {};
   const empresas = data?.empresas || [];
   const porEmpresa = data?.porEmpresa || [];
   const muestraMinima = data?.limites?.muestraMinima ?? 20;
+
+  // Se separan en dos grupos en vez de ocultar los de poca muestra: esconderlos
+  // dejaria el despiece con 2 piezas de 9, y se perderia la senal de que hay
+  // repuestos que todavia no acumulan historial suficiente.
+  const confiables = resumen.filter((fila) => fila.confiable);
+  const enEspera = resumen.filter((fila) => !fila.confiable);
 
   return (
     <div
@@ -239,27 +251,98 @@ export default function KpiDashboard({ data, detalle, filters, error }) {
           />
         </section>
 
-        <Panel title="Despiece del vehículo">
-          <VehiculoDespiece
-            resumen={resumen}
-            muestraMinima={muestraMinima}
-            seleccionado={seleccionado}
-            onSeleccionar={(id) => setSeleccionado(id === seleccionado ? null : id)}
-          />
-        </Panel>
-
-        <Panel title="Repuestos medidos">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {resumen.map((fila) => (
-              <TarjetaRepuesto
-                key={fila.id}
-                fila={fila}
+        <Panel
+          title="Despiece del vehículo"
+          right={(
+            <div className="flex rounded-md border border-slate-200 p-0.5">
+              {[
+                { id: '2d', label: 'Plano', icono: Square },
+                { id: '3d', label: '3D', icono: Box },
+              ].map(({ id, label, icono: Icono }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setVista(id)}
+                  className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-semibold transition ${
+                    vista === id ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <Icono size={13} /> {label}
+                </button>
+              ))}
+            </div>
+          )}
+        >
+          {vista === '3d' ? (
+            <Suspense
+              fallback={(
+                <div className="grid h-[520px] place-items-center text-sm text-slate-500">
+                  Cargando vista 3D…
+                </div>
+              )}
+            >
+              <VehiculoDespiece3D
+                resumen={resumen}
                 muestraMinima={muestraMinima}
-                activo={seleccionado === fila.id}
+                seleccionado={seleccionado}
                 onSeleccionar={(id) => setSeleccionado(id === seleccionado ? null : id)}
               />
-            ))}
-          </div>
+            </Suspense>
+          ) : (
+            <VehiculoDespiece
+              resumen={resumen}
+              muestraMinima={muestraMinima}
+              seleccionado={seleccionado}
+              onSeleccionar={(id) => setSeleccionado(id === seleccionado ? null : id)}
+            />
+          )}
+        </Panel>
+
+        <Panel
+          title="Repuestos medidos"
+          right={<span className="text-xs text-slate-500">{confiables.length} de {resumen.length} con muestra suficiente</span>}
+        >
+          {confiables.length > 0 && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {confiables.map((fila) => (
+                <TarjetaRepuesto
+                  key={fila.id}
+                  fila={fila}
+                  muestraMinima={muestraMinima}
+                  activo={seleccionado === fila.id}
+                  onSeleccionar={(id) => setSeleccionado(id === seleccionado ? null : id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {enEspera.length > 0 && (
+            <>
+              {/* Los de poca muestra van aparte y en gris: se siguen pudiendo
+                  abrir (su detalle vale, como mostro el caso de la rotula),
+                  pero nadie los confunde con un dato sobre el que decidir. */}
+              <div className="mb-3 mt-6 flex items-center gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Acumulando datos
+                </span>
+                <span className="h-px flex-1 bg-slate-200" />
+                <span className="text-xs text-slate-400">
+                  Menos de {muestraMinima} mediciones
+                </span>
+              </div>
+              <div className="grid gap-3 opacity-70 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {enEspera.map((fila) => (
+                  <TarjetaRepuesto
+                    key={fila.id}
+                    fila={fila}
+                    muestraMinima={muestraMinima}
+                    activo={seleccionado === fila.id}
+                    onSeleccionar={(id) => setSeleccionado(id === seleccionado ? null : id)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </Panel>
 
         {seleccionado && (
