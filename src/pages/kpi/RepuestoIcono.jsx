@@ -21,6 +21,151 @@ function tinte(hex, mezcla = 0.88) {
 }
 
 const DIBUJOS = {
+  'zapatas-freno': (c, t) => (
+    <>
+  {/* zapata: media luna con forro de friccion */}
+  <path d="M60 18 A42 42 0 0 0 60 102" fill="none" stroke={c} strokeWidth="2"/>
+  <path d="M60 18 A42 42 0 0 0 60 102 L60 92 A32 32 0 0 1 60 28 Z" fill={t} stroke={c} strokeWidth="2"/>
+  {/* rayado del material de friccion */}
+  <g stroke={c} strokeWidth="1" opacity="0.5">
+    <path d="M26 40 l10 4 M20 54 l11 2 M20 66 l11 -2 M26 80 l10 -4"/>
+  </g>
+  {/* alma de la zapata */}
+  <path d="M60 28 A32 32 0 0 0 60 92" fill="none" stroke={c} strokeWidth="1.6"/>
+  {/* apoyos y resorte */}
+  <circle cx="62" cy="24" r="4" fill="#ffffff" stroke={c} strokeWidth="1.8"/>
+  <circle cx="62" cy="96" r="4" fill="#ffffff" stroke={c} strokeWidth="1.8"/>
+  <path d="M66 34 q14 26 0 52" fill="none" stroke={c} strokeWidth="1.4" strokeDasharray="3 3"/>
+    </>
+  ),
+  'bujias': (c, t) => (
+    <>
+  {/* terminal superior */}
+  <path d="M54 16 h12 v10 h-12 z" fill={t} stroke={c} strokeWidth="2"/>
+  {/* aislador ceramico */}
+  <path d="M51 26 h18 l-2 18 h-14 z" fill="#ffffff" stroke={c} strokeWidth="2"/>
+  <path d="M53 44 h14 l-1 10 h-12 z" fill="#ffffff" stroke={c} strokeWidth="1.6"/>
+  {/* hexagono de llave */}
+  <path d="M48 54 h24 v12 h-24 z" fill={t} stroke={c} strokeWidth="2"/>
+  <path d="M48 60 h24" stroke={c} strokeWidth="1" opacity="0.6"/>
+  {/* rosca */}
+  <path d="M52 66 h16 v18 h-16 z" fill="#ffffff" stroke={c} strokeWidth="2"/>
+  <g stroke={c} strokeWidth="1" opacity="0.6">
+    <path d="M52 70 h16 M52 74 h16 M52 78 h16 M52 82 h16"/>
+  </g>
+  {/* electrodo central y de masa: la separacion es lo que se desgasta */}
+  <path d="M60 84 v12" stroke={c} strokeWidth="2.4"/>
+  <path d="M52 84 v10 h8" fill="none" stroke={c} strokeWidth="2"/>
+    </>
+  ),
+  'faja-accesorios': (c, t) => (
+    <>
+  {/* correa en lazo sobre dos poleas */}
+  <path d="M38 34 h44 a22 22 0 0 1 0 44 h-44 a22 22 0 0 1 0 -44 z"
+        fill="none" stroke={c} strokeWidth="2.6"/>
+  <path d="M38 42 h44 a14 14 0 0 1 0 28 h-44 a14 14 0 0 1 0 -28 z"
+        fill={t} stroke={c} strokeWidth="1.6"/>
+  {/* poleas */}
+  <circle cx="38" cy="56" r="13" fill="#ffffff" stroke={c} strokeWidth="2"/>
+  <circle cx="38" cy="56" r="4" fill={t} stroke={c} strokeWidth="1.4"/>
+  <circle cx="82" cy="56" r="13" fill="#ffffff" stroke={c} strokeWidth="2"/>
+  <circle cx="82" cy="56" r="4" fill={t} stroke={c} strokeWidth="1.4"/>
+  {/* nervaduras en V: es el perfil que se agrieta */}
+  <g stroke={c} strokeWidth="1" opacity="0.55">
+    <path d="M46 34 v8 M54 34 v8 M62 34 v8 M70 34 v8 M78 34 v8"/>
+    <path d="M46 70 v8 M54 70 v8 M62 70 v8 M70 70 v8 M78 70 v8"/>
+  </g>
+    </>
+  ),
+  'plumillas': (c, t) => (
+    <>
+  {/* brazo del limpiaparabrisas */}
+  <path d="M22 86 l16 -46" stroke={c} strokeWidth="3" strokeLinecap="round"/>
+  <circle cx="22" cy="88" r="5" fill={t} stroke={c} strokeWidth="2"/>
+  {/* estructura de la escobilla */}
+  <path d="M34 42 l54 -14" stroke={c} strokeWidth="2.4"/>
+  <path d="M36 50 l54 -14" stroke={c} strokeWidth="2"/>
+  {/* puentes articulados */}
+  <g stroke={c} strokeWidth="1.6">
+    <path d="M42 41 l1 8 M56 37 l1 8 M70 33 l1 8 M84 30 l1 8"/>
+  </g>
+  {/* goma de barrido: lo que se desgasta */}
+  <path d="M37 54 l54 -14" stroke={c} strokeWidth="3.2" strokeLinecap="round"/>
+  {/* arco de barrido */}
+  <path d="M30 84 a44 44 0 0 1 60 -16" fill="none" stroke={c} strokeWidth="1.2"
+        strokeDasharray="4 4" opacity="0.6"/>
+    </>
+  ),
+  'filtro-aceite': (c, t) => (
+    <>
+  {/* cuerpo cilindrico enroscable */}
+  <path d="M38 30 h44 v58 a6 6 0 0 1 -6 6 h-32 a6 6 0 0 1 -6 -6 z" fill={t} stroke={c} strokeWidth="2"/>
+  {/* base roscada */}
+  <path d="M34 20 h52 v10 h-52 z" fill="#ffffff" stroke={c} strokeWidth="2"/>
+  <g stroke={c} strokeWidth="1" opacity="0.6"><path d="M34 24 h52 M34 27 h52"/></g>
+  {/* junta y agujeros de entrada */}
+  <circle cx="60" cy="25" r="5" fill={t} stroke={c} strokeWidth="1.6"/>
+  {/* nervaduras del cuerpo */}
+  <g stroke={c} strokeWidth="1" opacity="0.5">
+    <path d="M38 44 h44 M38 58 h44 M38 72 h44"/>
+  </g>
+  {/* gota de aceite */}
+  <path d="M60 100 q5 7 0 11 q-5 -4 0 -11 z" fill={c} opacity="0.7"/>
+    </>
+  ),
+  'filtro-aire': (c, t) => (
+    <>
+  {/* caja rectangular con medio plisado */}
+  <path d="M22 36 h76 v48 h-76 z" fill="#ffffff" stroke={c} strokeWidth="2"/>
+  <path d="M28 42 h64 v36 h-64 z" fill={t} stroke={c} strokeWidth="1.6"/>
+  {/* pliegues: la superficie filtrante */}
+  <g stroke={c} strokeWidth="1.5">
+    <path d="M34 42 v36 M42 42 v36 M50 42 v36 M58 42 v36 M66 42 v36 M74 42 v36 M82 42 v36"/>
+  </g>
+  {/* marco de sellado */}
+  <path d="M22 36 h76 v6 h-76 z" fill={t} stroke={c} strokeWidth="1.6"/>
+  <path d="M22 78 h76 v6 h-76 z" fill={t} stroke={c} strokeWidth="1.6"/>
+  {/* flujo de aire */}
+  <path d="M14 60 h8 M106 60 h-8" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+  <path d="M18 56 l4 4 l-4 4" fill="none" stroke={c} strokeWidth="1.6"/>
+    </>
+  ),
+  'filtro-cabina': (c, t) => (
+    <>
+  {/* panel plano y delgado, el de habitaculo */}
+  <path d="M20 44 h80 v32 h-80 z" fill="#ffffff" stroke={c} strokeWidth="2"/>
+  <path d="M26 48 h68 v24 h-68 z" fill={t} stroke={c} strokeWidth="1.4"/>
+  {/* plisado fino */}
+  <g stroke={c} strokeWidth="1.2">
+    <path d="M32 48 v24 M38 48 v24 M44 48 v24 M50 48 v24 M56 48 v24
+             M62 48 v24 M68 48 v24 M74 48 v24 M80 48 v24 M86 48 v24"/>
+  </g>
+  {/* marco */}
+  <path d="M20 44 h80 v5 h-80 z" fill={t} stroke={c} strokeWidth="1.4"/>
+  <path d="M20 71 h80 v5 h-80 z" fill={t} stroke={c} strokeWidth="1.4"/>
+  {/* simbolo de aire limpio hacia la cabina */}
+  <path d="M34 90 q12 -8 24 0 q12 8 24 0" fill="none" stroke={c} strokeWidth="1.8" opacity="0.7"/>
+  <path d="M46 32 q8 -6 16 0" fill="none" stroke={c} strokeWidth="1.6" opacity="0.5"/>
+    </>
+  ),
+  'filtro-combustible': (c, t) => (
+    <>
+  {/* cuerpo en linea, con entrada y salida */}
+  <path d="M34 40 h52 a8 8 0 0 1 8 8 v24 a8 8 0 0 1 -8 8 h-52 a8 8 0 0 1 -8 -8 v-24 a8 8 0 0 1 8 -8 z"
+        fill={t} stroke={c} strokeWidth="2"/>
+  {/* elemento filtrante interior */}
+  <path d="M40 48 h40 v24 h-40 z" fill="#ffffff" stroke={c} strokeWidth="1.6"/>
+  <g stroke={c} strokeWidth="1.2" opacity="0.7">
+    <path d="M46 48 v24 M54 48 v24 M62 48 v24 M70 48 v24"/>
+  </g>
+  {/* conexiones de manguera */}
+  <path d="M14 56 h12 v8 h-12 z" fill={t} stroke={c} strokeWidth="1.8"/>
+  <path d="M94 56 h12 v8 h-12 z" fill={t} stroke={c} strokeWidth="1.8"/>
+  {/* sentido del flujo */}
+  <path d="M18 60 h70" stroke={c} strokeWidth="1.2" strokeDasharray="4 3" opacity="0.6"/>
+  <path d="M84 56 l5 4 l-5 4" fill="none" stroke={c} strokeWidth="1.6"/>
+    </>
+  ),
   'pastillas-freno': (c, t) => (
     <>
   {/* pastilla trasera, desplazada para dar profundidad */}

@@ -20,8 +20,15 @@ export function zonaLabel(zona) {
 
 // Estado de la medicion segun cuanta muestra la respalda. Es lo que evita que
 // alguien tome una decision de compra sobre un promedio de un solo caso.
+// La curva se sostiene en las FALLAS observadas: las piezas que siguen en
+// servicio aportan informacion, pero no definen donde cae la curva.
+function fallasDe(fila) {
+  return fila?.km?.nFallas ?? fila?.n ?? 0;
+}
+
 export function estadoMuestra(fila, muestraMinima) {
-  if (!fila || !fila.n) {
+  const n = fallasDe(fila);
+  if (!fila || !n) {
     return {
       id: 'sin-datos',
       label: '—',
@@ -31,11 +38,11 @@ export function estadoMuestra(fila, muestraMinima) {
       borde: 'border-slate-200',
     };
   }
-  if (fila.n < muestraMinima) {
+  if (n < muestraMinima) {
     return {
       id: 'insuficiente',
       label: 'Muestra insuficiente',
-      detalle: `${fila.n} ${fila.n === 1 ? 'medición' : 'mediciones'}`,
+      detalle: `${n} ${n === 1 ? 'falla observada' : 'fallas observadas'}`,
       color: '#d97706',
       chip: 'bg-amber-50 text-amber-700',
       borde: 'border-amber-200',
@@ -44,7 +51,7 @@ export function estadoMuestra(fila, muestraMinima) {
   return {
     id: 'confiable',
     label: 'Muestra suficiente',
-    detalle: `${fila.n} mediciones`,
+    detalle: `${n} fallas observadas`,
     color: '#059669',
     chip: 'bg-emerald-50 text-emerald-700',
     borde: 'border-emerald-200',
@@ -54,4 +61,16 @@ export function estadoMuestra(fila, muestraMinima) {
 export function kmText(valor) {
   if (valor === null || valor === undefined) return '—';
   return `${new Intl.NumberFormat('es-PE').format(Math.round(valor))} km`;
+}
+
+// Kaplan-Meier devuelve null cuando la curva nunca baja hasta ese porcentaje:
+// con el historial disponible ese punto todavia no se alcanzo. Decir "—" lo
+// confundiria con "no hay datos", asi que se informa la cota real observada.
+export function vidaText(valor, curva) {
+  if (valor !== null && valor !== undefined) return kmText(valor);
+  // La curva arranca siempre en {km:0, s:1}. Si no tiene mas puntos es que no
+  // hubo ninguna falla, y "> 0 km" no diria nada.
+  const ultimo = curva?.length > 1 ? curva[curva.length - 1] : null;
+  if (!ultimo) return '—';
+  return `> ${new Intl.NumberFormat('es-PE').format(Math.round(ultimo.km))} km`;
 }

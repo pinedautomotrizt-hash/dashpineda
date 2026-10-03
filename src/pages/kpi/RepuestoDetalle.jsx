@@ -4,7 +4,7 @@ import { AlertTriangle, X } from 'lucide-react';
 import { Panel } from '../../components/dashboard/DashboardPrimitives';
 import { number } from '../../utils/formatters';
 import RepuestoIcono from './RepuestoIcono';
-import { estadoMuestra, kmText, zonaColor, zonaLabel } from './kpiLabels';
+import { estadoMuestra, kmText, vidaText, zonaColor, zonaLabel } from './kpiLabels';
 
 function Metrica({ label, valor, ayuda, destacado = false }) {
   return (
@@ -67,6 +67,41 @@ export default function RepuestoDetalle({ detalle, cargando, onCerrar }) {
   const color = zonaColor(repuesto.zona);
   const estado = estadoMuestra(resumen, limites.muestraMinima);
 
+  // Escalonada: la supervivencia se mantiene constante entre falla y falla.
+  const curvaOption = {
+    grid: { left: 48, right: 16, top: 16, bottom: 36 },
+    tooltip: {
+      trigger: 'axis',
+      formatter: (puntos) => {
+        const p = puntos[0];
+        return `${number.format(p.value[0])} km<br/><b>${p.value[1]}%</b> siguen en servicio`;
+      },
+    },
+    xAxis: {
+      type: 'value',
+      name: 'km',
+      nameLocation: 'middle',
+      nameGap: 24,
+      axisLabel: { formatter: (v) => `${Math.round(v / 1000)}k` },
+    },
+    yAxis: { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%' } },
+    series: [{
+      type: 'line',
+      step: 'end',
+      showSymbol: false,
+      lineStyle: { width: 2 },
+      areaStyle: { opacity: 0.08 },
+      data: (resumen.km?.curva ?? []).map((p) => [p.km, Number((p.s * 100).toFixed(1))]),
+      markLine: {
+        silent: true,
+        symbol: 'none',
+        label: { formatter: (p) => (p.value === 90 ? 'B10' : 'Mediana'), fontSize: 10 },
+        lineStyle: { type: 'dashed', color: '#94a3b8' },
+        data: [{ yAxis: 90 }, { yAxis: 50 }],
+      },
+    }],
+  };
+
   const histogramaOption = {
     grid: { left: 48, right: 16, top: 24, bottom: 48 },
     tooltip: {
@@ -124,18 +159,46 @@ export default function RepuestoDetalle({ detalle, cargando, onCerrar }) {
           <span><strong>{estado.label}.</strong> {estado.detalle}</span>
         </div>
 
+        {/* Las dos primeras salen de Kaplan-Meier, que usa tambien las piezas
+            que todavia no fallaron. El promedio queda como referencia. */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Metrica label="Vida B10" valor={kmText(resumen.b10)} destacado />
-          <Metrica label="Mediana" valor={kmText(resumen.mediana)} />
-          <Metrica label="Vida útil media" valor={kmText(resumen.mttf)} />
           <Metrica
-            label="Dispersión"
-            valor={resumen.desv ? `± ${kmText(resumen.desv)}` : '—'}
+            label="Vida B10"
+            valor={vidaText(resumen.km?.kmB10, resumen.km?.curva)}
+            ayuda="Ya falló el 10%"
+            destacado
+          />
+          <Metrica
+            label="Mediana de vida"
+            valor={vidaText(resumen.km?.kmMediana, resumen.km?.curva)}
+            ayuda="Ya falló la mitad"
+          />
+          <Metrica
+            label="Observaciones"
+            valor={`${resumen.km?.nFallas ?? 0} + ${resumen.km?.nCensurados ?? 0}`}
+            ayuda="fallas + aún en servicio"
+          />
+          <Metrica
+            label="Promedio entre cambios"
+            valor={kmText(resumen.mttf)}
             ayuda={resumen.min ? `${kmText(resumen.min)} a ${kmText(resumen.max)}` : null}
           />
         </div>
 
       </Panel>
+
+      {/* La curva responde "que probabilidad hay de que la pieza siga viva a
+          X km". Baja solo cuando hay una falla; los tramos planos son piezas
+          que salieron del seguimiento sin fallar. */}
+      {resumen.km?.curva?.length > 1 ? (
+        <Panel title="Curva de supervivencia">
+          <ReactECharts option={curvaOption} style={{ height: 280 }} notMerge />
+          <p className="mt-2 text-[11px] leading-snug text-slate-500">
+            Calculada con {resumen.km.nFallas} fallas y {resumen.km.nCensurados} piezas
+            que aún no fallaron. Las líneas marcan el 10% y el 50% de fallas acumuladas.
+          </p>
+        </Panel>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="Cómo se reparte la duración">

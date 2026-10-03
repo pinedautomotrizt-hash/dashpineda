@@ -1,183 +1,294 @@
-import React from 'react';
-import RepuestoIcono from './RepuestoIcono';
-import { estadoMuestra, kmText, zonaColor } from './kpiLabels';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { estadoMuestra, vidaText, zonaColor } from './kpiLabels';
 
-// Vista explosionada: el vehiculo queda como referencia en trazo tenue y cada
-// pieza medida se dibuja aparte, en grande, unida a su posicion real por una
-// linea de fuga.
+// Vehiculo de referencia con cada repuesto medido señalado sobre el modelo.
 //
-// Todo lo que aparece dibujado corresponde a algo que el modulo mide: no hay
-// piezas decorativas. Se dibuja en SVG y no con un modelo 3D porque el despiece
-// exige que cada pieza sea un elemento propio y clicable, y los modelos GLTF
-// disponibles vienen agrupados por material, no por componente.
+// El modelo se dibuja en three.js, pero las etiquetas van en HTML por encima:
+// se proyecta la posicion 3D de cada anclaje a coordenadas de pantalla en cada
+// frame. Asi el texto queda nitido a cualquier zoom y el clic es real, cosa que
+// no se consigue con sprites ni con texto dentro de la escena.
 
-const VB = { w: 1160, h: 740 };
-const FICHA = { w: 152, h: 146 };
+// Un modelo por sede: cada taller atiende un parque distinto y el dibujo debe
+// parecerse a lo que ahi se ve entrar.
+//
+// rotacionY alinea el eje largo del modelo con X, que es como estan definidos
+// los anclajes. El Kia ya viene con el largo en X (rotacion 0); el L200 lo trae
+// en Z, asi que hay que girarlo un cuarto de vuelta. Si un modelo apareciera
+// mirando al lado contrario, se le suma Math.PI.
+const MODELOS = Object.freeze({
+  'Pineda Trujillo': {
+    url: '/assets/1978-2006_mitsubishi_l200_red_offroader_v4.glb',
+    rotacionY: -Math.PI / 2,
+  },
+  'Pineda Callao': {
+    url: '/assets/modelo_camioneta.glb',
+    rotacionY: 0,
+  },
+});
 
-// Encaje del dibujo del vehiculo dentro del lienzo.
-const VEHICULO = { escala: 0.815, dx: 180, dy: 89 };
+const MODELO_POR_DEFECTO = MODELOS['Pineda Callao'];
 
-const pv = (x, y) => [x * VEHICULO.escala + VEHICULO.dx, y * VEHICULO.escala + VEHICULO.dy];
-
-// Silueta de pick-up: es la carroceria mas representativa de la flota medida
-// (Hilux, L200, Ranger y Frontier concentran la mayoria de los intervalos).
-const CARROCERIA = `
-  M 245 420 L 245 382 Q 245 367 259 363 L 452 356 L 506 300 L 618 300
-  L 652 356 L 652 344 L 852 344 Q 864 344 864 356 L 864 420
-  L 790 420 A 55 55 0 0 0 680 420 L 420 420 A 55 55 0 0 0 310 420 Z
-`;
-
-// El reparto no es estetico: cada ficha va del lado donde cae su anclaje, para
-// que las lineas de fuga no se crucen. Tren delantero a la izquierda, vano
-// motor arriba, transmision y combustible a la derecha.
-const PIEZAS = Object.freeze([
-  { n: 1, id: 'amortiguador', ancla: [365, 386], ficha: [24, 20], lado: 'izq' },
-  { n: 2, id: 'disco-freno', ancla: [350, 430], ficha: [24, 186], lado: 'izq' },
-  { n: 3, id: 'pastillas-freno', ancla: [386, 446], ficha: [24, 352], lado: 'izq' },
-  { n: 4, id: 'rotula', ancla: [328, 456], ficha: [24, 518], lado: 'izq' },
-  { n: 5, id: 'bomba-agua', ancla: [296, 366], ficha: [360, 16], lado: 'arriba' },
-  { n: 6, id: 'correa-distribucion', ancla: [330, 376], ficha: [530, 16], lado: 'arriba' },
-  { n: 7, id: 'bateria', ancla: [398, 362], ficha: [700, 16], lado: 'arriba' },
-  { n: 8, id: 'embrague', ancla: [492, 400], ficha: [984, 230], lado: 'der' },
-  { n: 9, id: 'bomba-combustible', ancla: [640, 412], ficha: [984, 420], lado: 'der' },
-]);
-
-function entradaDeLinea({ ficha: [x, y], lado }) {
-  if (lado === 'izq') return [x + FICHA.w, y + FICHA.h / 2];
-  if (lado === 'der') return [x, y + FICHA.h / 2];
-  return [x + FICHA.w / 2, y + FICHA.h];
+function modeloDe(local) {
+  return MODELOS[local] || MODELO_POR_DEFECTO;
 }
 
-export default function VehiculoDespiece({ resumen, muestraMinima, seleccionado, onSeleccionar }) {
-  const porId = Object.fromEntries((resumen || []).map((fila) => [fila.id, fila]));
+// Largo al que se normaliza el modelo. Los anclajes estan en fracciones de ese
+// volumen, asi que cambiar este numero no los descoloca.
+const LARGO = 3.9;
+
+// Anclaje de cada pieza, en fracciones del volumen del vehiculo:
+//   x  -0.5 = frente, +0.5 = cola
+//   y  -0.5 = suelo,  +0.5 = techo
+//   z  lado del vehiculo (positivo = lado hacia la camara)
+// Si se cambia el modelo por otro, esto es lo unico que hay que recalibrar.
+const ANCLAJES = Object.freeze({
+  // vano motor
+  'filtro-aire': [-0.44, -0.16, 0.14],
+  'filtro-aceite': [-0.40, -0.30, 0.04],
+  bujias: [-0.36, -0.14, -0.08],
+  'faja-accesorios': [-0.46, -0.24, -0.02],
+  bateria: [-0.34, -0.12, 0.24],
+  // tren delantero
+  amortiguador: [-0.27, -0.26, 0.32],
+  'pastillas-freno': [-0.30, -0.42, 0.34],
+  // habitaculo y bajos
+  'filtro-cabina': [-0.16, -0.08, 0.18],
+  plumillas: [-0.20, 0.06, 0.10],
+  'filtro-combustible': [0.06, -0.40, 0.14],
+  // tren posterior
+  'zapatas-freno': [0.30, -0.42, 0.32],
+});
+
+export default function VehiculoDespiece({
+  resumen, muestraMinima, seleccionado, onSeleccionar, local,
+}) {
+  const { url, rotacionY } = modeloDe(local);
+  const contenedorRef = useRef(null);
+  const marcadoresRef = useRef([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(false);
+  // Posicion en pantalla de cada etiqueta, recalculada en cada frame.
+  const [posiciones, setPosiciones] = useState({});
+
+  const piezas = useMemo(
+    () => (resumen || []).filter((fila) => ANCLAJES[fila.id]),
+    [resumen],
+  );
+
+  useEffect(() => {
+    const contenedor = contenedorRef.current;
+    if (!contenedor) return undefined;
+
+    const escena = new THREE.Scene();
+    escena.background = new THREE.Color('#f8fafc');
+
+    const camara = new THREE.PerspectiveCamera(
+      34,
+      contenedor.clientWidth / contenedor.clientHeight,
+      0.1,
+      100,
+    );
+    camara.position.set(4.4, 1.9, 4.6);
+
+    const render3d = new THREE.WebGLRenderer({ antialias: true });
+    render3d.setSize(contenedor.clientWidth, contenedor.clientHeight);
+    render3d.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    render3d.outputColorSpace = THREE.SRGBColorSpace;
+    contenedor.appendChild(render3d.domElement);
+
+    const controles = new OrbitControls(camara, render3d.domElement);
+    controles.enableDamping = true;
+    controles.enablePan = false;
+    controles.minDistance = 3.4;
+    controles.maxDistance = 9;
+    // No se baja de la horizontal: por debajo del piso no hay nada que ver.
+    controles.maxPolarAngle = Math.PI / 2.05;
+    controles.target.set(0, 0.7, 0);
+
+    escena.add(new THREE.HemisphereLight('#ffffff', '#cbd5e1', 2.2));
+    const principal = new THREE.DirectionalLight('#ffffff', 2.6);
+    principal.position.set(3, 5, 4);
+    escena.add(principal);
+    const relleno = new THREE.DirectionalLight('#dbeafe', 1.2);
+    relleno.position.set(-4, 2, -3);
+    escena.add(relleno);
+
+    const piso = new THREE.Mesh(
+      new THREE.CircleGeometry(3.4, 64),
+      new THREE.MeshBasicMaterial({ color: '#e2e8f0' }),
+    );
+    piso.rotation.x = -Math.PI / 2;
+    escena.add(piso);
+
+    let cancelado = false;
+    marcadoresRef.current = [];
+    setCargando(true);
+    setError(false);
+    new GLTFLoader().load(
+      url,
+      (gltf) => {
+        if (cancelado) return;
+        const modelo = gltf.scene;
+
+        // La rotacion va antes de medir: Box3 usa la matriz actual, asi que
+        // girar despues dejaria el encuadre y los anclajes calculados sobre el
+        // volumen sin rotar.
+        modelo.rotation.y = rotacionY;
+        modelo.updateMatrixWorld(true);
+
+        // Primero escalar y recien despues centrar: position no se reescala con
+        // el modelo, asi que centrar antes deja el offset sin ajustar.
+        const caja = new THREE.Box3().setFromObject(modelo);
+        const tamanio = caja.getSize(new THREE.Vector3());
+        const escala = LARGO / (Math.max(tamanio.x, tamanio.y, tamanio.z) || 1);
+        modelo.scale.setScalar(escala);
+        modelo.updateMatrixWorld(true);
+
+        const cajaEscalada = new THREE.Box3().setFromObject(modelo);
+        modelo.position.sub(cajaEscalada.getCenter(new THREE.Vector3()));
+        escena.add(modelo);
+
+        // Apoyarlo en el piso en vez de dejarlo flotando.
+        modelo.updateMatrixWorld(true);
+        const apoyado = new THREE.Box3().setFromObject(modelo);
+        modelo.position.y -= apoyado.min.y;
+
+        modelo.updateMatrixWorld(true);
+        const cajaFinal = new THREE.Box3().setFromObject(modelo);
+        const dim = cajaFinal.getSize(new THREE.Vector3());
+        const centro = cajaFinal.getCenter(new THREE.Vector3());
+        marcadoresRef.current = Object.entries(ANCLAJES).map(([id, [fx, fy, fz]]) => ({
+          id,
+          punto: new THREE.Vector3(
+            centro.x + fx * dim.x,
+            centro.y + fy * dim.y,
+            centro.z + fz * dim.z,
+          ),
+        }));
+
+        controles.target.copy(centro);
+        setCargando(false);
+      },
+      undefined,
+      () => {
+        if (!cancelado) {
+          setCargando(false);
+          setError(true);
+        }
+      },
+    );
+
+    const proyeccion = new THREE.Vector3();
+    let frame = 0;
+    const animar = () => {
+      controles.update();
+      render3d.render(escena, camara);
+
+      // Las etiquetas siguen al modelo: se proyecta cada anclaje a pixeles.
+      if (marcadoresRef.current.length) {
+        const ancho = contenedor.clientWidth;
+        const alto = contenedor.clientHeight;
+        const siguiente = {};
+        marcadoresRef.current.forEach(({ id, punto }) => {
+          proyeccion.copy(punto).project(camara);
+          siguiente[id] = {
+            x: (proyeccion.x * 0.5 + 0.5) * ancho,
+            y: (-proyeccion.y * 0.5 + 0.5) * alto,
+            // z fuera de rango significa que quedo detras de la camara.
+            visible: proyeccion.z < 1,
+          };
+        });
+        setPosiciones(siguiente);
+      }
+      frame = requestAnimationFrame(animar);
+    };
+    animar();
+
+    const redimensionar = () => {
+      camara.aspect = contenedor.clientWidth / contenedor.clientHeight;
+      camara.updateProjectionMatrix();
+      render3d.setSize(contenedor.clientWidth, contenedor.clientHeight);
+    };
+    window.addEventListener('resize', redimensionar);
+
+    return () => {
+      cancelado = true;
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', redimensionar);
+      controles.dispose();
+      render3d.dispose();
+      if (render3d.domElement.parentNode === contenedor) {
+        contenedor.removeChild(render3d.domElement);
+      }
+    };
+  }, [url, rotacionY]);
 
   return (
-    <svg
-      viewBox={`0 0 ${VB.w} ${VB.h}`}
-      className="mx-auto h-auto w-full max-w-[1140px]"
-      role="img"
-      aria-label="Vista explosionada del vehículo con la vida útil de cada repuesto"
-    >
-      <title>Vista explosionada por repuesto</title>
+    <div className="relative h-[520px] w-full overflow-hidden rounded-lg bg-slate-50">
+      <div ref={contenedorRef} className="absolute inset-0" />
 
-      <defs>
-        {/* Retícula de fondo: da lectura de plano sin competir con el dibujo. */}
-        <pattern id="kpi-reticula" width="26" height="26" patternUnits="userSpaceOnUse">
-          <path d="M26 0H0V26" fill="none" stroke="#eef2f7" strokeWidth="0.7" />
-        </pattern>
-      </defs>
+      {cargando ? (
+        <div className="absolute inset-0 grid place-items-center text-sm text-slate-500">
+          Cargando modelo…
+        </div>
+      ) : null}
+      {error ? (
+        <div className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-slate-500">
+          No se pudo cargar el modelo del vehículo.
+        </div>
+      ) : null}
 
-      <rect x="0" y="0" width={VB.w} height={VB.h} fill="url(#kpi-reticula)" />
-      <rect x="0.5" y="0.5" width={VB.w - 1} height={VB.h - 1} fill="none" stroke="#cbd5e1" strokeWidth="1" />
-
-      {/* ------------------------------------------- vehículo de referencia */}
-      <g transform={`translate(${VEHICULO.dx},${VEHICULO.dy}) scale(${VEHICULO.escala})`}>
-        <path d={CARROCERIA} fill="#f8fafc" stroke="#94a3b8" strokeWidth="2" strokeLinejoin="round" />
-        <path d="M510 306 L552 306 L552 352 L468 352 Z" fill="#eef2f7" stroke="#cbd5e1" strokeWidth="1.4" />
-        <path d="M560 306 L612 306 L638 352 L560 352 Z" fill="#eef2f7" stroke="#cbd5e1" strokeWidth="1.4" />
-        <path d="M652 344 L652 420 M452 356 L452 420" stroke="#cbd5e1" strokeWidth="1.2" strokeDasharray="5 4" />
-        <path d="M228 480 H 884" stroke="#e2e8f0" strokeWidth="1.4" />
-        {[365, 735].map((cx) => (
-          <g key={cx}>
-            <circle cx={cx} cy="434" r="46" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1.6" />
-            <circle cx={cx} cy="434" r="22" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1.4" />
-          </g>
-        ))}
-      </g>
-
-      {/* ------------------------------------------------ ficha de cada pieza */}
-      {PIEZAS.map((pieza) => {
-        const fila = porId[pieza.id];
-        if (!fila) return null;
-
-        const estado = estadoMuestra(fila, muestraMinima);
+      {/* Etiquetas en HTML sobre el canvas: texto nitido y clic real. */}
+      {!cargando && !error && piezas.map((fila) => {
+        const posicion = posiciones[fila.id];
+        if (!posicion?.visible) return null;
         const color = zonaColor(fila.zona);
-        const activo = seleccionado === pieza.id;
-        const [ax, ay] = pv(...pieza.ancla);
-        const [ex, ey] = entradaDeLinea(pieza);
-        const [fx, fy] = pieza.ficha;
+        const estado = estadoMuestra(fila, muestraMinima);
+        const activo = seleccionado === fila.id;
 
         return (
-          <g key={pieza.id}>
-            {/* línea de fuga: une la ficha con la posición real de la pieza */}
-            <line
-              x1={ex}
-              y1={ey}
-              x2={ax}
-              y2={ay}
-              stroke={activo ? color : '#cbd5e1'}
-              strokeWidth={activo ? 1.6 : 1.1}
-              strokeDasharray="6 5"
-            />
-            <circle cx={ax} cy={ay} r="9" fill={color} fillOpacity={activo ? 0.3 : 0.18} />
-            <circle cx={ax} cy={ay} r={activo ? 6 : 4.5} fill={color} />
-
-            <g
-              role="button"
-              tabIndex={0}
-              className="cursor-pointer outline-none"
-              onClick={() => onSeleccionar(pieza.id)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  onSeleccionar(pieza.id);
-                }
-              }}
-              aria-label={`${pieza.n}. ${fila.label}: ${kmText(fila.mttf)}`}
-            >
-              <rect
-                x={fx}
-                y={fy}
-                width={FICHA.w}
-                height={FICHA.h}
-                rx="6"
-                fill="#ffffff"
-                stroke={activo ? color : '#e2e8f0'}
-                strokeWidth={activo ? 2 : 1}
+          <button
+            key={fila.id}
+            type="button"
+            onClick={() => onSeleccionar(fila.id)}
+            style={{ left: posicion.x, top: posicion.y }}
+            className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none"
+            title={fila.label}
+          >
+            <span className="flex items-center gap-1.5">
+              <span
+                className={`block shrink-0 rounded-full ring-2 ring-white transition-all ${activo ? 'h-5 w-5' : 'h-3.5 w-3.5'}`}
+                style={{ backgroundColor: color }}
               />
-              {/* globo numerado, como en un plano de taller */}
-              <circle cx={fx + 16} cy={fy + 16} r="11" fill={color} />
-              <text x={fx + 16} y={fy + 20} fontSize="11" fontWeight="700" fill="#ffffff" textAnchor="middle">
-                {String(pieza.n).padStart(2, '0')}
-              </text>
-
-              <g transform={`translate(${fx + 36},${fy + 8})`}>
-                <RepuestoIcono id={pieza.id} color={color} size={82} />
-              </g>
-
-              <text x={fx + FICHA.w / 2} y={fy + 104} fontSize="10.5" fontWeight="600" fill="#334155" textAnchor="middle">
-                {fila.label.toUpperCase()}
-              </text>
-              <text
-                x={fx + FICHA.w / 2}
-                y={fy + 126}
-                fontSize="19"
-                fontWeight="700"
-                fill={fila.confiable ? '#0f172a' : '#94a3b8'}
-                textAnchor="middle"
+              <span
+                className={`whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-left shadow-md transition ${
+                  activo ? 'border-slate-400 bg-white' : 'border-slate-200 bg-white/90 hover:bg-white'
+                }`}
               >
-                {fila.mttf ? `${Math.round(fila.mttf / 1000)}k km` : '—'}
-              </text>
-              <circle cx={fx + FICHA.w / 2 - 22} cy={fy + 136} r="3" fill={estado.color} />
-              <text x={fx + FICHA.w / 2 - 14} y={fy + 139} fontSize="9" fill="#64748b">
-                {fila.n ? `n = ${fila.n}` : '—'}
-              </text>
-            </g>
-          </g>
+                <span className="block text-[11px] font-semibold leading-tight text-slate-600">
+                  {fila.label}
+                </span>
+                <span className="mt-0.5 flex items-center gap-1.5">
+                  <span
+                    className="inline-block h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: estado.color }}
+                  />
+                  <span className="text-[15px] font-bold leading-tight text-slate-950">
+                    {vidaText(fila.km?.kmMediana, fila.km?.curva)}
+                  </span>
+                </span>
+              </span>
+            </span>
+          </button>
         );
       })}
 
-      {/* ----------------------------------------------------- cajetín técnico */}
-      <g>
-        <rect x={VB.w - 256} y={VB.h - 54} width="240" height="40" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" />
-        <line x1={VB.w - 256} y1={VB.h - 36} x2={VB.w - 16} y2={VB.h - 36} stroke="#e2e8f0" strokeWidth="1" />
-        <text x={VB.w - 246} y={VB.h - 41} fontSize="9" fontWeight="700" fill="#334155" letterSpacing="1.4">
-          VISTA EXPLOSIONADA
-        </text>
-        <text x={VB.w - 246} y={VB.h - 22} fontSize="8.5" fill="#64748b">
-          Vida útil por repuesto · 09 componentes
-        </text>
-      </g>
-    </svg>
+      <p className="absolute bottom-2 left-3 text-[10px] text-slate-400">
+        Arrastra para girar · rueda para acercar
+      </p>
+    </div>
   );
 }

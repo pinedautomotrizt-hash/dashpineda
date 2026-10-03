@@ -1,15 +1,16 @@
 import React, { Suspense, lazy, useState } from 'react';
-import { BookOpen, Box, Building2, Gauge, Layers, RefreshCw, Square, TriangleAlert } from 'lucide-react';
+import { BookOpen, Building2, Car, Gauge, Layers, RefreshCw, TriangleAlert } from 'lucide-react';
 import { Card, Panel, LoadingOverlay } from '../../components/dashboard/DashboardPrimitives';
 import { number } from '../../utils/formatters';
 import RepuestoIcono from './RepuestoIcono';
-import VehiculoDespiece from './VehiculoDespiece';
+import ModelosPanel from './ModelosPanel';
 
-// three.js pesa lo suyo: la vista 3D se carga solo cuando se pide, para no
-// sumarla al bundle de quien nunca la abre.
-const VehiculoDespiece3D = lazy(() => import('./VehiculoDespiece3D'));
+// three.js + GLTFLoader + el modelo pesan lo suyo: el visor se carga solo al
+// entrar al modulo, para no sumarlo al bundle de quien nunca lo abre.
+const VehiculoDespiece = lazy(() => import('./VehiculoDespiece'));
+
 import RepuestoDetalle from './RepuestoDetalle';
-import { estadoMuestra, kmText, zonaColor, zonaLabel } from './kpiLabels';
+import { estadoMuestra, kmText, vidaText, zonaColor, zonaLabel } from './kpiLabels';
 
 function FiltrosKpi({ locales, empresas, local, setLocal, empresa, setEmpresa, soloFlota, setSoloFlota, loading, load }) {
   return (
@@ -95,26 +96,32 @@ function TarjetaRepuesto({ fila, muestraMinima, activo, onSeleccionar }) {
         </div>
       </div>
 
+      {/* Mismas cifras que el despiece y el detalle: todo sale de Kaplan-Meier.
+          El promedio entre cambios queda abajo, como referencia. */}
       <p className="mt-3 text-2xl font-bold tracking-tight text-slate-950">
-        {fila.mttf ? kmText(fila.mttf) : '—'}
+        {vidaText(fila.km?.kmMediana, fila.km?.curva)}
       </p>
 
       <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-slate-500">
         <div className="flex justify-between">
-          <dt>Mediana</dt>
-          <dd className="font-medium text-slate-700">{fila.mediana ? `${Math.round(fila.mediana / 1000)}k` : '—'}</dd>
+          <dt>B10</dt>
+          <dd className="font-medium text-slate-700">
+            {fila.km?.kmB10 ? `${Math.round(fila.km.kmB10 / 1000)}k` : '—'}
+          </dd>
         </div>
         <div className="flex justify-between">
-          <dt>B10</dt>
-          <dd className="font-medium text-slate-700">{fila.b10 ? `${Math.round(fila.b10 / 1000)}k` : '—'}</dd>
+          <dt>Promedio</dt>
+          <dd className="font-medium text-slate-700">
+            {fila.mttf ? `${Math.round(fila.mttf / 1000)}k` : '—'}
+          </dd>
         </div>
       </dl>
 
       <div className="mt-3 flex items-center gap-1.5 border-t border-slate-100 pt-2">
         <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: estado.color }} />
         <span className="truncate text-[11px] text-slate-500">
-          {fila.n
-            ? `${fila.n} ${fila.n === 1 ? 'medición' : 'mediciones'} · ${fila.placas} ${fila.placas === 1 ? 'vehículo' : 'vehículos'}`
+          {fila.km?.nFallas
+            ? `${fila.km.nFallas} ${fila.km.nFallas === 1 ? 'falla' : 'fallas'} · ${fila.km.nCensurados} en servicio`
             : '—'}
         </span>
       </div>
@@ -150,7 +157,7 @@ function TablaEmpresas({ filas, muestraMinima }) {
                 </td>
                 <td className="py-2 pr-3 text-right tabular-nums text-slate-700">{fila.placas}</td>
                 <td className="py-2 pr-3 text-right tabular-nums text-slate-700">{fila.n}</td>
-                <td className="py-2 pr-3 text-right tabular-nums text-slate-700">{kmText(fila.mttf)}</td>
+                <td className="py-2 pr-3 text-right tabular-nums text-slate-700">{vidaText(fila.km?.kmMediana, fila.km?.curva)}</td>
                 <td className="py-2 pr-3 text-right tabular-nums text-slate-700">{kmText(fila.mediana)}</td>
                 <td className="py-2 pr-3 text-right font-semibold tabular-nums text-slate-900">{kmText(fila.b10)}</td>
               </tr>
@@ -168,12 +175,12 @@ export default function KpiDashboard({ data, detalle, filters, error }) {
     seleccionado, setSeleccionado, loading, loadingDetalle, load,
   } = filters;
 
-  const [vista, setVista] = useState('2d');
 
   const resumen = data?.resumen || [];
   const totales = data?.totales || {};
   const empresas = data?.empresas || [];
   const porEmpresa = data?.porEmpresa || [];
+  const porModelo = data?.porModelo || [];
   const muestraMinima = data?.limites?.muestraMinima ?? 20;
 
   // Se separan en dos grupos en vez de ocultar los de poca muestra: esconderlos
@@ -253,49 +260,22 @@ export default function KpiDashboard({ data, detalle, filters, error }) {
 
         <Panel
           title="Despiece del vehículo"
-          right={(
-            <div className="flex rounded-md border border-slate-200 p-0.5">
-              {[
-                { id: '2d', label: 'Plano', icono: Square },
-                { id: '3d', label: '3D', icono: Box },
-              ].map(({ id, label, icono: Icono }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setVista(id)}
-                  className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-semibold transition ${
-                    vista === id ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <Icono size={13} /> {label}
-                </button>
-              ))}
-            </div>
-          )}
         >
-          {vista === '3d' ? (
-            <Suspense
-              fallback={(
-                <div className="grid h-[520px] place-items-center text-sm text-slate-500">
-                  Cargando vista 3D…
-                </div>
-              )}
-            >
-              <VehiculoDespiece3D
-                resumen={resumen}
-                muestraMinima={muestraMinima}
-                seleccionado={seleccionado}
-                onSeleccionar={(id) => setSeleccionado(id === seleccionado ? null : id)}
-              />
-            </Suspense>
-          ) : (
+          <Suspense
+            fallback={(
+              <div className="grid h-[520px] place-items-center text-sm text-slate-500">
+                Cargando modelo…
+              </div>
+            )}
+          >
             <VehiculoDespiece
               resumen={resumen}
               muestraMinima={muestraMinima}
+              local={local}
               seleccionado={seleccionado}
               onSeleccionar={(id) => setSeleccionado(id === seleccionado ? null : id)}
             />
-          )}
+          </Suspense>
         </Panel>
 
         <Panel
@@ -327,7 +307,7 @@ export default function KpiDashboard({ data, detalle, filters, error }) {
                 </span>
                 <span className="h-px flex-1 bg-slate-200" />
                 <span className="text-xs text-slate-400">
-                  Menos de {muestraMinima} mediciones
+                  Menos de {muestraMinima} fallas observadas
                 </span>
               </div>
               <div className="grid gap-3 opacity-70 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -352,6 +332,18 @@ export default function KpiDashboard({ data, detalle, filters, error }) {
             onCerrar={() => setSeleccionado(null)}
           />
         )}
+
+        <Panel
+          title="Vida útil por modelo de vehículo"
+          right={(
+            <span className="flex items-center gap-1.5 text-xs text-slate-500">
+              <Car size={14} />
+              {porModelo.length} {porModelo.length === 1 ? 'modelo' : 'modelos'}
+            </span>
+          )}
+        >
+          <ModelosPanel filas={porModelo} repuestos={resumen} muestraMinima={muestraMinima} />
+        </Panel>
 
         <Panel
           title="Comparación entre empresas"
