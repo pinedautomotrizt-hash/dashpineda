@@ -11,9 +11,12 @@ const hoy = new Date();
 const anioActual = hoy.getFullYear();
 const mesActual = hoy.getMonth() + 1;
 const diasDelMesActual = new Date(anioActual, mesActual, 0).getDate();
-const diasTranscurridos = hoy.getDate();
 const DASH = '\u2014';
-const MES_INICIO_PROMEDIO_PROYECCION = 5;
+// Cuantos meses cerrados entran al promedio que proyecta el mes en curso.
+// Es una ventana movil: en octubre promedia julio-agosto-setiembre, en
+// noviembre agosto-setiembre-octubre, y asi. Tres meses reaccionan rapido a un
+// cambio de tendencia sin que un mes atipico se lleve la proyeccion entera.
+const MESES_VENTANA_PROMEDIO = 3;
 //Incremento del sector automotriz (Actual) Gerson 
 const INCREMENTO_TALLER_AUTOMOTRIZ = 0.05;
 const MES_INICIO_INCREMENTO_PROYECCION = 10;
@@ -77,6 +80,20 @@ export default function ProyeccionAnualPanel() {
     return mapa;
   }, [data]);
 
+  // Dia del mes hasta el que cada sede tiene datos. Si la ultima carga no es del
+  // mes en curso, el mes todavia no tiene nada y no hay ritmo que medir.
+  const diasCubiertosPorSede = useMemo(() => {
+    const mapa = new Map();
+    (data?.cobertura || []).forEach((fila) => {
+      if (!fila.ultima_fecha) return;
+      const ultima = new Date(fila.ultima_fecha);
+      const delMesEnCurso = ultima.getUTCFullYear() === anioActual
+        && ultima.getUTCMonth() + 1 === mesActual;
+      mapa.set(fila.local_nombre, delMesEnCurso ? ultima.getUTCDate() : 0);
+    });
+    return mapa;
+  }, [data]);
+
   const metas = data?.metas || {};
   const sedes = Object.keys(metas);
 
@@ -98,6 +115,7 @@ export default function ProyeccionAnualPanel() {
                   metasPorAnio={metas[sede]}
                   facturadoPorCelda={facturadoPorCelda}
                   unidadesPorCelda={unidadesPorCelda}
+                  diasCubiertos={diasCubiertosPorSede.get(sede) ?? 0}
                 />
               ))}
               {!loading && !sedes.length && (
@@ -112,7 +130,7 @@ export default function ProyeccionAnualPanel() {
   );
 }
 
-function SedeProyeccion({ sede, metasPorAnio, facturadoPorCelda, unidadesPorCelda }) {
+function SedeProyeccion({ sede, metasPorAnio, facturadoPorCelda, unidadesPorCelda, diasCubiertos }) {
   const anios = Object.keys(metasPorAnio).map(Number).sort((a, b) => a - b);
 
   const valor = (anio, mes) => facturadoPorCelda.get(`${sede}|${anio}|${mes}`) || 0;
@@ -153,6 +171,7 @@ function SedeProyeccion({ sede, metasPorAnio, facturadoPorCelda, unidadesPorCeld
               valor={valor}
               unidades={unidades}
               esFuturo={esFuturo}
+              diasCubiertos={diasCubiertos}
             />
           );
         })}
@@ -161,7 +180,7 @@ function SedeProyeccion({ sede, metasPorAnio, facturadoPorCelda, unidadesPorCeld
   );
 }
 
-function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) {
+function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo, diasCubiertos }) {
   const meses = MONTH_NAMES.map((_, index) => index + 1);
   const alcanceAnual = meses.reduce((suma, mes) => suma + (esFuturo(anio, mes) ? 0 : valor(anio, mes)), 0);
   const unidadesAnuales = meses.reduce((suma, mes) => suma + (esFuturo(anio, mes) ? 0 : unidades(anio, mes)), 0);
@@ -174,26 +193,59 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo }) 
   // junio, julio, agosto y el mes actual proyectado por avance del mes.
   const ticketAcumulado = unidadesAnuales ? alcanceAnual / unidadesAnuales : null;
   const esAnioActual = anio === anioActual;
+  // Los ultimos meses YA CERRADOS, retrocediendo desde el anterior al actual.
+  // El mes en curso queda fuera a proposito: si entrara con su cifra parcial,
+  // un mes recien empezado arrastraria tambien los meses siguientes.
+  // Se cruza el cambio de año hacia atras, para que en enero la ventana siga
+  // siendo octubre-noviembre-diciembre y no quede vacia.
+  const ventanaPromedio = () => {
+    if (!esAnioActual) return [];
+    const recogidos = [];
+    let mesCursor = mesActual - 1;
+    let anioCursor = anio;
+    while (recogidos.length < MESES_VENTANA_PROMEDIO) {
+      if (mesCursor < 1) {
+        mesCursor = 12;
+        anioCursor -= 1;
+      }
+      const delMes = unidades(anioCursor, mesCursor);
+      // Sin datos hacia atras no tiene sentido seguir: promediar ceros de meses
+      // que nunca se cargaron hundiria la proyeccion.
+      if (!delMes) break;
+      recogidos.push(delMes);
+      mesCursor -= 1;
+    }
+    return recogidos;
+  };
+
+  const unidadesVentana = ventanaPromedio();
+  const promedioUnidadesRecientes = unidadesVentana.length
+    ? Math.round(unidadesVentana.reduce((suma, valorMes) => suma + valorMes, 0) / unidadesVentana.length)
+    : null;
+
+  // Proyeccion del mes en curso: mezcla entre el ritmo real y el historico,
+  // ponderada por cuanto del mes lleva cargado.
+  //
+  // Al dia 1 el ritmo medido no dice nada -- una sola jornada buena o mala
+  // moveria el mes entero -- asi que casi todo el peso lo lleva el historico.
+  // Conforme avanzan los dias el peso se invierte, y cerca de fin de mes manda
+  // lo que de verdad paso. El divisor son los dias CARGADOS, no los del
+  // calendario: la importacion va uno o dos dias atras y repartir lo facturado
+  // entre dias sin cargar hunde la cifra.
   const proyectarUnidadesMesActual = () => {
     const unidadesActuales = unidades(anio, mesActual);
-    if (!unidadesActuales) return 0;
-    return Math.round((unidadesActuales / Math.max(1, diasTranscurridos)) * diasDelMesActual);
+    if (!diasCubiertos || !unidadesActuales) return promedioUnidadesRecientes ?? 0;
+
+    const ritmo = (unidadesActuales / diasCubiertos) * diasDelMesActual;
+    if (!promedioUnidadesRecientes) return Math.round(ritmo);
+
+    const avance = Math.min(1, diasCubiertos / diasDelMesActual);
+    return Math.round(ritmo * avance + promedioUnidadesRecientes * (1 - avance));
   };
-  const unidadesBasePromedio = (mes) => (
-    esAnioActual && mes === mesActual ? proyectarUnidadesMesActual() : unidades(anio, mes)
-  );
-  const mesesPromedio = meses.filter((mes) => (
-    esAnioActual
-      && mes >= MES_INICIO_PROMEDIO_PROYECCION
-      && mes <= mesActual
-      && !esFuturo(anio, mes)
-  ));
-  const promedioUnidadesRecientes = mesesPromedio.length
-    ? Math.round(mesesPromedio.reduce((suma, mes) => suma + unidadesBasePromedio(mes), 0) / mesesPromedio.length)
-    : null;
+
   const unidadesEstimadas = (mes) => {
     if (!esAnioActual || mes < mesActual) return null;
-    if (mes === mesActual) return unidadesBasePromedio(mes);
+    if (mes === mesActual) return proyectarUnidadesMesActual();
     return promedioUnidadesRecientes;
   };
   const esMesProyectado = (mes) => esAnioActual && mes >= mesActual;
