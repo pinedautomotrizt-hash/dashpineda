@@ -15,6 +15,7 @@ import { money, moneyByCurrency, number, pct, shortDate } from '../../utils/form
 import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
 import ProyeccionAnualPanel from '../../components/dashboard/ProyeccionAnualPanel';
 import RetencionClientesPanel from '../../components/dashboard/RetencionClientesPanel';
+import EmisorDiario from './EmisorDiario';
 
 
 export default function FacturacionDashboard({ data, filters, error }) {
@@ -197,6 +198,7 @@ export default function FacturacionDashboard({ data, filters, error }) {
   // Venta, distinta de "Asesor Operación"): suele ser la persona encargada de
   // facturar por sede, no quien atendio el vehiculo.
   const emisorRows = data?.porEmisor || [];
+  const emisorDiaRows = data?.porEmisorDia || [];
   const emisorOption = {
     tooltip: {
       trigger: 'item',
@@ -490,6 +492,11 @@ export default function FacturacionDashboard({ data, filters, error }) {
               Sin comprobantes para este periodo.
             </div>
           )}
+
+          {/* Seguimiento diario de quien emite: lo que facturo cada dia y
+              sobre cuantas OT distintas. Las OT salen de la operacion
+              relacionada del comprobante, no del total de la sede. */}
+          <EmisorDiario filas={emisorDiaRows} />
         </Panel>
       </section>
       <ProyeccionAnualPanel />
