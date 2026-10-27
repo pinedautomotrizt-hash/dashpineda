@@ -5,22 +5,16 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { money, number } from '../../utils/formatters';
 import { CAPAS } from './capas';
 
-// Vista explosionada de la camioneta: las piezas se separan en capas
-// verticales (carroceria arriba, ruedas abajo), como un despiece de catalogo.
+// Vista explosionada del vehiculo: las piezas se separan en capas verticales
+// (carroceria arriba, ruedas abajo), como un despiece de catalogo.
 //
-// El modelo (ranger_despiece.glb) es la Ford Ranger del visor de Empresas
-// optimizada: mismas mallas y nombres de material, mas liviana. Cada malla se
-// asigna a una capa por el nombre de su material (ver capas.js); si se cambia
-// el modelo, eso es lo unico que hay que recalibrar.
-const URL_MODELO = '/assets/ranger_despiece.glb';
-
-const CAPA_POR_MATERIAL = Object.fromEntries(
-  CAPAS.flatMap((capa) => capa.materiales.map((material) => [material, capa.id])),
-);
+// Los modelos (*_despiece.glb) son versiones optimizadas con las mismas mallas
+// y nombres de material; cada malla se asigna a una capa por el nombre de su
+// material (ver capas.js).
 const LARGO = 4.2;        // largo al que se normaliza el modelo
 const SEPARACION = 0.62;  // distancia vertical entre capas al despiezar
 
-export default function VistaExplosionada({ capasData = [], seleccionada, onSeleccionar }) {
+export default function VistaExplosionada({ modelo, capasData = [], seleccionada, onSeleccionar }) {
   const contenedorRef = useRef(null);
   const estadoRef = useRef({ objetivo: 0, actual: 0, seleccionada: null });
   const anclasRef = useRef([]);
@@ -34,7 +28,15 @@ export default function VistaExplosionada({ capasData = [], seleccionada, onSele
 
   useEffect(() => {
     const contenedor = contenedorRef.current;
-    if (!contenedor) return undefined;
+    if (!contenedor || !modelo) return undefined;
+    const capaPorMaterial = Object.fromEntries(
+      Object.entries(modelo.materiales).flatMap(([capa, materiales]) => materiales.map((m) => [m, capa])),
+    );
+    anclasRef.current = [];
+    estadoRef.current.actual = 0;
+    setCargando(true);
+    setError(false);
+    setDespiezado(false);
 
     const escena = new THREE.Scene();
     escena.background = new THREE.Color('#f8fafc');
@@ -69,7 +71,7 @@ export default function VistaExplosionada({ capasData = [], seleccionada, onSele
     let cancelado = false;
 
     new GLTFLoader().load(
-      URL_MODELO,
+      modelo.url,
       (gltf) => {
         if (cancelado) return;
         const modelo = gltf.scene;
@@ -94,7 +96,7 @@ export default function VistaExplosionada({ capasData = [], seleccionada, onSele
         modelo.traverse((obj) => { if (obj.isMesh) mallas.push(obj); });
         mallas.forEach((malla) => {
           const material = Array.isArray(malla.material) ? malla.material[0] : malla.material;
-          const capa = CAPA_POR_MATERIAL[material?.name] || 'exterior';
+          const capa = capaPorMaterial[material?.name] || 'exterior';
           grupos[capa].attach(malla);
           (Array.isArray(malla.material) ? malla.material : [malla.material]).forEach((m) => {
             m.userData.opacidadOriginal = m.opacity;
@@ -184,9 +186,9 @@ export default function VistaExplosionada({ capasData = [], seleccionada, onSele
       render3d.dispose();
       if (render3d.domElement.parentNode === contenedor) contenedor.removeChild(render3d.domElement);
     };
-    // La escena se arma una sola vez; despiece y seleccion van por ref.
+    // La escena se arma por modelo (al cambiar de sede); despiece y seleccion van por ref.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [modelo?.url]);
 
   const datos = Object.fromEntries(capasData.map((capa) => [capa.id, capa]));
 

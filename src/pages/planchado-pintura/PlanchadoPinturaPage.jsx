@@ -6,7 +6,7 @@ import { Card, Panel, LoadingOverlay } from '../../components/dashboard/Dashboar
 import { api } from '../../api';
 import { APP_PATHS, MONTH_NAMES } from '../../config/appConfig';
 import { currentMonth, money, number } from '../../utils/formatters';
-import { CAPAS } from './capas';
+import { CAPAS, modeloPorLocal } from './capas';
 
 // three.js y el modelo pesan: el despiece se carga solo al entrar al modulo.
 const VistaExplosionada = lazy(() => import('./VistaExplosionada'));
@@ -157,9 +157,9 @@ function PlanchadoPinturaDashboard({ sidebarCollapsed }) {
 
         {/* Despiece + capas */}
         <section className="grid gap-4 xl:grid-cols-[1fr_340px]">
-          <Panel title="Vista explosionada" right={<span className="text-xs text-slate-500">Trabajos del mes por parte del vehículo</span>}>
+          <Panel title="Vista explosionada" right={<span className="text-xs text-slate-500">{modeloPorLocal(local).nombre} · trabajos del mes por parte del vehículo</span>}>
             <Suspense fallback={<div className="grid h-[620px] place-items-center text-sm text-slate-500">Cargando visor 3D…</div>}>
-              <VistaExplosionada capasData={data?.capas || []} seleccionada={capaSeleccionada} onSeleccionar={setCapaSeleccionada} />
+              <VistaExplosionada modelo={modeloPorLocal(local)} capasData={data?.capas || []} seleccionada={capaSeleccionada} onSeleccionar={setCapaSeleccionada} />
             </Suspense>
           </Panel>
           <Panel title="Partes del vehículo">
