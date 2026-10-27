@@ -37,6 +37,7 @@ export const APP_PATHS = Object.freeze({
   empresaDetalle: '/empresas/:empresa',
   asesorPersonal: '/asesor-personal',
   ajustes: '/ajustes',
+  planchadoPintura: '/planchado-pintura',
 });
 
 // La ruta de detalle usa el nombre de la empresa como clave (no hay id numerico).
@@ -52,6 +53,7 @@ export const APP_MODULES = Object.freeze([
   { id: 'asesores', path: APP_PATHS.asesores, label: 'Por Asesor', icon: 'users' },
   { id: 'empresas', path: APP_PATHS.empresas, label: 'Empresas', icon: 'building' },
   { id: 'kpi', path: APP_PATHS.kpi, label: 'KPI Repuestos', icon: 'gauge' },
+  { id: 'planchado-pintura', path: APP_PATHS.planchadoPintura, label: 'Planchado y Pintura', icon: 'paint' },
   { id: 'seguimiento', path: APP_PATHS.seguimiento, label: 'Seguimientos', icon: 'phone',
     roles: ['ASESOR_INDIVIDUAL'] },
   { id: 'agenda', path: APP_PATHS.agenda, label: 'Agenda', icon: 'calendarCheck',

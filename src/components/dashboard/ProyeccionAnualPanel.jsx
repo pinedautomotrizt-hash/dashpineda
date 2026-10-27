@@ -250,53 +250,19 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo, di
   };
   const esMesProyectado = (mes) => esAnioActual && mes >= mesActual;
 
-  // Que se habria proyectado para un mes YA CERRADO, usando unicamente lo que
-  // se sabia antes de que empezara: la ventana de los tres meses previos y el
-  // ticket acumulado hasta el mes anterior.
-  //
-  // Antes estas celdas repetian la facturacion real, asi que la fila
-  // "Proyeccion" no se podia contrastar con nada. Reconstruida, la tabla
-  // permite ver mes a mes si el modelo se quedo corto o se paso.
-  const proyeccionRetrospectiva = (mes) => {
-    const previos = [];
-    let mesCursor = mes - 1;
-    let anioCursor = anio;
-    while (previos.length < MESES_VENTANA_PROMEDIO) {
-      if (mesCursor < 1) {
-        mesCursor = 12;
-        anioCursor -= 1;
-      }
-      const delMes = unidades(anioCursor, mesCursor);
-      if (!delMes) break;
-      previos.push(delMes);
-      mesCursor -= 1;
-    }
-    if (!previos.length) return null;
-    const promedio = previos.reduce((suma, valorMes) => suma + valorMes, 0) / previos.length;
-
-    // El ticket tambien es el de entonces: incluir meses posteriores seria
-    // usar informacion que en ese momento no existia.
-    let alcancePrevio = 0;
-    let unidadesPrevias = 0;
-    for (let i = 1; i < mes; i += 1) {
-      alcancePrevio += valor(anio, i);
-      unidadesPrevias += unidades(anio, i);
-    }
-    if (!unidadesPrevias) return null;
-    return Math.round(promedio) * (alcancePrevio / unidadesPrevias);
-  };
-
+  // Un mes YA CERRADO muestra exactamente su alcance real: la proyeccion solo
+  // estima lo que todavia no paso (mes en curso y futuros). Asi, cuando un mes
+  // termina, su proyeccion queda igual a lo facturado y la cifra anual es
+  // "real hasta hoy + estimado de lo que falta".
   const proyeccionBaseMes = (mes) => {
     if (esMesProyectado(mes)) return (unidadesEstimadas(mes) || 0) * (ticketAcumulado || 0);
     if (esFuturo(anio, mes)) return 0;
-    // Si no hay historial suficiente hacia atras (enero, por ejemplo) no se
-    // inventa una proyeccion: se muestra lo facturado.
-    return proyeccionRetrospectiva(mes) ?? valor(anio, mes);
+    return valor(anio, mes);
   };
-  // El mes actual conserva su proyecciÃ³n base. Cada mes posterior recibe
-  // exactamente el mismo incremento de 5%, sin acumularlo entre meses.
+  // El +5% solo se aplica a meses todavia proyectados (desde octubre): un mes
+  // que ya cerro conserva su alcance real, sin incremento.
   const proyeccionConIncrementoMes = (mes) => (
-    esAnioActual && mes >= MES_INICIO_INCREMENTO_PROYECCION
+    esMesProyectado(mes) && mes >= MES_INICIO_INCREMENTO_PROYECCION
       ? proyeccionBaseMes(mes) * Math.pow(
         1 + INCREMENTO_TALLER_AUTOMOTRIZ,
         mes - MES_INICIO_INCREMENTO_PROYECCION + 1,
@@ -408,7 +374,7 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo, di
                       ? Number(unidadesEstimadas(mes)).toLocaleString('es-PE')
                       : DASH}
                   </td>
-                ))}
+                ))}  
                 <td className="px-3 py-1.5 text-right text-indigo-800">Prom. Jun-{MONTH_NAMES[mesActual - 1]}</td>
               </tr>
               <tr className="border-t border-slate-100 bg-indigo-50/50">

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { CalendarCheck, Banknote, Building2, CalendarDays, Download, FileUp, Gauge, LayoutDashboard, LogOut, Menu, PhoneCall, Settings, Users, X } from 'lucide-react';
+import { CalendarCheck, Banknote, Building2, CalendarDays, Download, FileUp, Gauge, LayoutDashboard, LogOut, Menu, PaintBucket, PhoneCall, Settings, Users, X } from 'lucide-react';
 import PinedaLogo from './PinedaLogo';
 import { APP_MODULES, APP_PATHS, puedeUsarRuta } from '../../config/appConfig';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
 
-const icons = { phone: PhoneCall, calendarCheck: CalendarCheck, gauge: Gauge, banknote: Banknote, calendar: CalendarDays, dashboard: LayoutDashboard, users: Users, building: Building2, upload: FileUp, download: Download, settings: Settings };
+const icons = { phone: PhoneCall, calendarCheck: CalendarCheck, gauge: Gauge, paint: PaintBucket, banknote: Banknote, calendar: CalendarDays, dashboard: LayoutDashboard, users: Users, building: Building2, upload: FileUp, download: Download, settings: Settings };
 
 // Contenido compartido por el sidebar de escritorio y el drawer movil: mismos
 // links, mismo bloque de usuario/logout, solo cambia el contenedor que lo envuelve.

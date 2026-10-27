@@ -58,14 +58,14 @@ function tooltipVariacionMensual({ anterior, actual, etiqueta, anioAnterior, ani
 // blanca centrada) para no introducir un segundo estilo de modal en el proyecto.
 // Solo el "cascaron" (fondo, tarjeta, encabezado, boton cerrar) es compartido;
 // cada uso decide que tabla mostrar adentro via children.
-function DetalleModal({ titulo, subtitulo, onClose, children }) {
+function DetalleModal({ titulo, subtitulo, onClose, children, ancho = 'max-w-2xl' }) {
   return (
     <div
       className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-2xl"
+        className={`w-full ${ancho} rounded-xl bg-white p-6 shadow-2xl`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-3 flex items-start justify-between gap-3">
@@ -154,6 +154,70 @@ function OtReprocesoTable({ filas }) {
   );
 }
 
+// Detalle de los reprocesos de un mes del grafico "Evolución mensual": que
+// vehiculo volvio, que se le hizo en el reproceso y cual fue la OT anterior
+// (el trabajo que probablemente se esta reprocesando), con quien la atendio.
+function ReprocesosMesTable({ filas }) {
+  return (
+    <table className="w-full text-left text-sm">
+      <thead className="sticky top-0 bg-white">
+        <tr className="border-b border-slate-200 text-xs text-slate-500">
+          <th className="py-2 pr-3 font-semibold">Vehículo</th>
+          <th className="px-3 py-2 font-semibold">Reproceso</th>
+          <th className="px-3 py-2 font-semibold">Trabajo del reproceso</th>
+          <th className="px-3 py-2 font-semibold">OT anterior</th>
+          <th className="py-2 pl-3 font-semibold">Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {filas.map((row) => {
+          const anterior = row.ot_anterior;
+          return (
+            <tr key={row.nro_orden} className="border-b border-slate-100 align-top">
+              <td className="py-2.5 pr-3">
+                <p className="font-semibold text-slate-900">{row.placa || 'Sin placa'}</p>
+                <p className="text-xs text-slate-500">{[row.marca, row.modelo].filter(Boolean).join(' ') || '—'}</p>
+                {row.kilometraje && <p className="text-xs text-slate-400">{number.format(Number(row.kilometraje) || 0)} km</p>}
+              </td>
+              <td className="px-3 py-2.5">
+                <p className="font-medium text-slate-800">OT {row.nro_orden}</p>
+                <p className="text-xs text-slate-500">
+                  {shortDate(row.fecha_apertura) || '—'} → {shortDate(row.fecha_cierre) || 'En taller'}
+                </p>
+                <p className="text-xs text-slate-500" title="Asesor / técnico">
+                  {[row.asesor, row.tecnico].filter(Boolean).join(' · ') || '—'}
+                </p>
+              </td>
+              <td className="max-w-[16rem] px-3 py-2.5 text-xs text-slate-700">{row.trabajos || 'Sin detalle de mano de obra'}</td>
+              <td className="px-3 py-2.5">
+                {anterior ? (
+                  <>
+                    <p className="font-medium text-slate-800">OT {anterior.nro_orden}</p>
+                    <p className="text-xs text-slate-500">
+                      {friendlyTipoOt(anterior.tipo_ot)} · {shortDate(anterior.fecha_apertura)}
+                    </p>
+                    <p className="text-xs font-semibold text-rose-600">
+                      Volvió a los {anterior.dias} día{anterior.dias === 1 ? '' : 's'}
+                    </p>
+                    {anterior.tecnico && <p className="text-xs text-slate-500" title="Técnico de la OT anterior">{anterior.tecnico}</p>}
+                  </>
+                ) : (
+                  <span className="text-xs text-slate-400">Sin OT previa registrada</span>
+                )}
+              </td>
+              <td className="py-2.5 pl-3">
+                <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${estadoBadgeClass(row.estado)}`}>
+                  {friendlyEstado(row.estado)}
+                </span>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
 export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) {
   const resumen = data?.resumen || { unidades_ot: 0, unidades_vehiculos: 0, reprocesos: 0, grupo_cliente: null };
   const evolucionMensual = data?.evolucionMensual || [];
@@ -180,15 +244,29 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
   const porVehiculo = data?.porVehiculo || [];
   const porSede = data?.porSede || [];
   const reprocesosDetalle = data?.reprocesosDetalle || [];
+  const reprocesosAnio = data?.reprocesosAnio || [];
   const manoObraTop = data?.manoObraTop || [];
   const repuestosCorrectivos = data?.repuestosCorrectivos || [];
   const porDia = data?.porDia || [];
 
   const categoria = resumen.grupo_cliente ? friendlyGrupo(resumen.grupo_cliente) : null;
 
+
+
+
+  
   // 'rapida' | 'lenta' | null: controla el modal de detalle de tiempo en taller.
   const [modalTiempo, setModalTiempo] = useState(null);
   const [modalReprocesos, setModalReprocesos] = useState(false);
+  // Mes (1-12) cuyo detalle de reprocesos se muestra en modal, o null.
+  const [mesReprocesos, setMesReprocesos] = useState(null);
+  const reprocesosDelMes = useMemo(
+    () => reprocesosAnio.filter((row) => row.mes === mesReprocesos),
+    [reprocesosAnio, mesReprocesos],
+  );
+  const abrirReprocesosMes = (mes) => {
+    if (reprocesosAnio.some((row) => row.mes === mes)) setMesReprocesos(mes);
+  };
   const masRapidas = tiempoTaller.masRapidas || [];
   const masLentas = tiempoTaller.masLentas || [];
   const tiposTiempoVisibles = tiempoTaller.porTipoOt.filter((row) => (
@@ -696,8 +774,34 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           )}
         >
           <div className="h-[300px] sm:h-[340px]">
-            <ReactECharts option={evolucionOption} style={{ height: '100%' }} notMerge lazyUpdate />
+            <ReactECharts
+              option={evolucionOption}
+              style={{ height: '100%', cursor: 'pointer' }}
+              notMerge
+              lazyUpdate
+              onEvents={{ click: (params) => abrirReprocesosMes((params.dataIndex ?? -1) + 1) }}
+            />
           </div>
+          {evolucionMensual.some((row) => row.reprocesos > 0) && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+              <span className="flex items-center gap-1 text-xs font-semibold text-rose-600">
+                <ShieldAlert size={14} />
+                Ver reprocesos:
+              </span>
+              {evolucionMensual.filter((row) => row.reprocesos > 0).map((row) => (
+                <button
+                  key={row.mes}
+                  type="button"
+                  onClick={() => abrirReprocesosMes(row.mes)}
+                  disabled={!reprocesosAnio.some((r) => r.mes === row.mes)}
+                  className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {MONTH_NAMES[row.mes - 1]} · {number.format(row.reprocesos)}
+                </button>
+              ))}
+              <span className="text-xs text-slate-400">o haz clic en un mes del gráfico</span>
+            </div>
+          )}
         </Panel>
 
         {/* 2b. Evolución mensual, pero por vehículos (placas) únicos */}
@@ -992,6 +1096,16 @@ export default function EmpresaDetalle({ nombreEmpresa, data, filters, error }) 
           onClose={() => setModalReprocesos(false)}
         >
           <OtReprocesoTable filas={reprocesosDetalle} />
+        </DetalleModal>
+      )}
+      {mesReprocesos && (
+        <DetalleModal
+          titulo={`Reprocesos de ${MONTH_NAMES[mesReprocesos - 1]} ${anioActual}`}
+          subtitulo={`${reprocesosDelMes.length} OT de reproceso de taller mecánica${filters.local && filters.local !== 'Todos' ? ` · ${filters.local}` : ''}`}
+          onClose={() => setMesReprocesos(null)}
+          ancho="max-w-5xl"
+        >
+          <ReprocesosMesTable filas={reprocesosDelMes} />
         </DetalleModal>
       )}
     </div>

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import {
   Banknote,
@@ -16,9 +16,20 @@ import DashboardFilterBar from '../../components/dashboard/DashboardFilterBar';
 import ProyeccionAnualPanel from '../../components/dashboard/ProyeccionAnualPanel';
 import RetencionClientesPanel from '../../components/dashboard/RetencionClientesPanel';
 import EmisorDiario from './EmisorDiario';
+import MargenPanel from './MargenPanel';
+
+// Margen sigue en desarrollo: oculto por ahora. Para volver a mostrarlo,
+// cambiar a true.
+const MOSTRAR_MARGEN = false;
+
+const VISTAS = [
+  { id: 'facturacion', label: 'Facturación' },
+  ...(MOSTRAR_MARGEN ? [{ id: 'margen', label: 'Margen' }] : []),
+];
 
 
 export default function FacturacionDashboard({ data, filters, error }) {
+  const [vista, setVista] = useState('facturacion');
   const summary = data?.resumen || {};
   const dailyRows = useMemo(() => {
     const grouped = new Map();
@@ -342,6 +353,25 @@ export default function FacturacionDashboard({ data, filters, error }) {
         </div>
       </header>
       {error && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>}
+      {VISTAS.length > 1 && (
+      <nav className="mb-4 inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm" aria-label="Vistas de facturación">
+        {VISTAS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setVista(item.id)}
+            className={`rounded-md px-4 py-1.5 text-sm font-semibold transition ${
+              vista === item.id ? 'bg-red-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
+      )}
+      {MOSTRAR_MARGEN && vista === 'margen' ? (
+        <MargenPanel month={filters.month} local={filters.local} />
+      ) : (
       <div className="relative">
       <LoadingOverlay show={filters.loading} />
       <section className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -502,6 +532,7 @@ export default function FacturacionDashboard({ data, filters, error }) {
       <ProyeccionAnualPanel />
       <RetencionClientesPanel />
       </div>
+      )}
     </div>
   );
 }
