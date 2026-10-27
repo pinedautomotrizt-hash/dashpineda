@@ -11,6 +11,9 @@ import { CAPAS } from './capas';
 // Los modelos (*_despiece.glb) son versiones optimizadas con las mismas mallas
 // y nombres de material; cada malla se asigna a una capa por el nombre de su
 // material (ver capas.js).
+// Cache en memoria: el visor de pieza del modal reutiliza el mismo archivo.
+THREE.Cache.enabled = true;
+
 const LARGO = 4.2;        // largo al que se normaliza el modelo
 const SEPARACION = 0.62;  // distancia vertical entre capas al despiezar
 
