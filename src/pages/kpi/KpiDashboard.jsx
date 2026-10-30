@@ -263,7 +263,7 @@ export default function KpiDashboard({ data, detalle, filters, error }) {
         >
           <Suspense
             fallback={(
-              <div className="grid h-[520px] place-items-center text-sm text-slate-500">
+              <div className="grid h-[600px] place-items-center text-sm text-slate-500">
                 Cargando modelo…
               </div>
             )}

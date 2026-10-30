@@ -18,9 +18,9 @@ import RetencionClientesPanel from '../../components/dashboard/RetencionClientes
 import EmisorDiario from './EmisorDiario';
 import MargenPanel from './MargenPanel';
 
-// Margen sigue en desarrollo: oculto por ahora. Para volver a mostrarlo,
-// cambiar a true.
-const MOSTRAR_MARGEN = false;
+// Pestaña Margen. Para ocultarla mientras se ajusta,
+// cambiar a false.
+const MOSTRAR_MARGEN = true;
 
 const VISTAS = [
   { id: 'facturacion', label: 'Facturación' },

@@ -6,7 +6,9 @@ import { Card, Panel, LoadingOverlay } from '../../components/dashboard/Dashboar
 import { api } from '../../api';
 import { APP_PATHS, MONTH_NAMES } from '../../config/appConfig';
 import { currentMonth, money, number } from '../../utils/formatters';
-import { CAPAS, modeloPorLocal } from './capas';
+import { CAPAS } from './capas';
+import { vehiculoPorDefecto, vehiculoPorId } from '../../config/vehiculosDespiece';
+import SelectorVehiculo from '../../components/despiece/SelectorVehiculo';
 
 // three.js y el modelo pesan: el despiece se carga solo al entrar al modulo.
 const VistaExplosionada = lazy(() => import('./VistaExplosionada'));
@@ -27,6 +29,9 @@ function usePlanchadoPintura() {
   const [month, setMonth] = useState(currentMonth());
   const [local, setLocal] = useState('Todos');
   const [locales, setLocales] = useState([]);
+  // '' = todas; si no, nombre exacto del cliente empresa (aseguradora, flota, ...).
+  const [empresa, setEmpresa] = useState('');
+  const [empresas, setEmpresas] = useState([]);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -40,14 +45,21 @@ function usePlanchadoPintura() {
     let vigente = true;
     setLoading(true);
     setError('');
-    api.get('/dashboard/planchado-pintura', { params: { month, local } })
-      .then((res) => { if (vigente) setData(res.data); })
+    api.get('/dashboard/planchado-pintura', { params: { month, local, empresa: empresa || undefined } })
+      .then((res) => {
+        if (!vigente) return;
+        setData(res.data);
+        setEmpresas(res.data.empresas || []);
+      })
       .catch((err) => { if (vigente) setError(err.response?.data?.message || err.message || 'No se pudo cargar Planchado y Pintura'); })
       .finally(() => { if (vigente) setLoading(false); });
     return () => { vigente = false; };
-  }, [month, local, recarga]);
+  }, [month, local, empresa, recarga]);
 
-  return { month, setMonth, local, setLocal, locales, data, loading, error, recargar: () => setRecarga((n) => n + 1) };
+  return {
+    month, setMonth, local, setLocal, locales, empresa, setEmpresa, empresas,
+    data, loading, error, recargar: () => setRecarga((n) => n + 1),
+  };
 }
 
 export default function PlanchadoPinturaPage() {
@@ -181,9 +193,17 @@ function ModalCapa({ capa, dato, numero, mes, local, modelo, onCerrar }) {
 }
 
 function PlanchadoPinturaDashboard({ sidebarCollapsed }) {
-  const { month, setMonth, local, setLocal, locales, data, loading, error, recargar } = usePlanchadoPintura();
+  const { month, setMonth, local, setLocal, locales, empresa, setEmpresa, empresas, data, loading, error, recargar } = usePlanchadoPintura();
+  // La empresa elegida sigue en la lista aunque en la sede/periodo nuevo no tenga OT.
+  const opcionesEmpresa = empresa && !empresas.some((e) => e.nombre === empresa)
+    ? [{ nombre: empresa, ots: 0, otsMes: 0 }, ...empresas]
+    : empresas;
   const [capaSeleccionada, setCapaSeleccionada] = useState(null);
   const [capaModal, setCapaModal] = useState(null);
+  // El vehiculo abre con el de la sede; si se elige otro, vale hasta cambiar de sede.
+  const [vehiculoElegido, setVehiculoElegido] = useState(null);
+  useEffect(() => { setVehiculoElegido(null); }, [local]);
+  const vehiculo = vehiculoElegido ? vehiculoPorId(vehiculoElegido) : vehiculoPorDefecto('planchadoPintura', local);
   // Elegir una parte la resalta en el 3D y abre su desglose; cerrar el modal deja el resaltado.
   const seleccionarCapa = (id) => {
     setCapaSeleccionada(id);
@@ -245,7 +265,7 @@ function PlanchadoPinturaDashboard({ sidebarCollapsed }) {
           <h1 className="mt-2 text-3xl font-black tracking-tight text-white">Planchado y Pintura</h1>
         </div>
         <div className="rounded-lg bg-white p-3 text-slate-900 shadow-sm">
-          <div className="grid grid-cols-[150px_170px_44px] gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-[150px_170px_240px_44px]">
             <label className="text-xs font-medium text-slate-500">
               Mes de recepción
               <input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} className="mt-1 h-10 w-full rounded-md border border-slate-200 px-2 text-sm text-slate-950" />
@@ -255,6 +275,20 @@ function PlanchadoPinturaDashboard({ sidebarCollapsed }) {
               <select value={local} onChange={(e) => setLocal(e.target.value)} className="mt-1 h-10 w-full rounded-md border border-slate-200 px-3 text-sm text-slate-950">
                 <option>Todos</option>
                 {locales.map((row) => <option key={row.local_nombre}>{row.local_nombre}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-slate-500">
+              Empresa
+              <select
+                value={empresa}
+                onChange={(e) => setEmpresa(e.target.value)}
+                title={empresa || 'Todas las empresas y particulares'}
+                className="mt-1 h-10 w-full truncate rounded-md border border-slate-200 px-3 text-sm text-slate-950"
+              >
+                <option value="">Todas</option>
+                {opcionesEmpresa.map((e) => (
+                  <option key={e.nombre} value={e.nombre}>{e.nombre} ({e.otsMes} OT en el mes)</option>
+                ))}
               </select>
             </label>
             <button type="button" onClick={recargar} title="Actualizar" className="mt-5 grid h-10 place-items-center rounded-md bg-red-700 text-white hover:bg-red-800">
@@ -287,9 +321,9 @@ function PlanchadoPinturaDashboard({ sidebarCollapsed }) {
 
         {/* Despiece + capas */}
         <section className="grid gap-4 xl:grid-cols-[1fr_340px]">
-          <Panel title="Vista explosionada" right={<span className="text-xs text-slate-500">{modeloPorLocal(local).nombre} · trabajos del mes por parte del vehículo</span>}>
+          <Panel title="Vista explosionada" right={<SelectorVehiculo value={vehiculo.id} onChange={setVehiculoElegido} />}>
             <Suspense fallback={<div className="grid h-[620px] place-items-center text-sm text-slate-500">Cargando visor 3D…</div>}>
-              <VistaExplosionada modelo={modeloPorLocal(local)} capasData={data?.capas || []} seleccionada={capaSeleccionada} onSeleccionar={seleccionarCapa} />
+              <VistaExplosionada modelo={vehiculo} capasData={data?.capas || []} seleccionada={capaSeleccionada} onSeleccionar={seleccionarCapa} />
             </Suspense>
           </Panel>
           <Panel title="Partes del vehículo">
@@ -433,7 +467,7 @@ function PlanchadoPinturaDashboard({ sidebarCollapsed }) {
           dato={(data?.capas || []).find((c) => c.id === capaModal)}
           mes={month}
           local={local}
-          modelo={modeloPorLocal(local)}
+          modelo={vehiculo}
           onCerrar={() => setCapaModal(null)}
         />
       )}

@@ -4,13 +4,14 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { money, number } from '../../utils/formatters';
 import { CAPAS } from './capas';
+import { capaFijaDe } from '../../config/vehiculosDespiece';
+import { agruparPorCapas, normalizarModelo, pintarCapas } from '../../components/despiece/despieceGeometrico';
 
 // Vista explosionada del vehiculo: las piezas se separan en capas verticales
 // (carroceria arriba, ruedas abajo), como un despiece de catalogo.
 //
-// Los modelos (*_despiece.glb) son versiones optimizadas con las mismas mallas
-// y nombres de material; cada malla se asigna a una capa por el nombre de su
-// material (ver capas.js).
+// Cada malla se asigna a una capa por el nombre de su material o, si el modelo
+// no lo trae bien nombrado, por su posicion (ver config/vehiculosDespiece.js).
 // Cache en memoria: el visor de pieza del modal reutiliza el mismo archivo.
 THREE.Cache.enabled = true;
 
@@ -32,9 +33,6 @@ export default function VistaExplosionada({ modelo, capasData = [], seleccionada
   useEffect(() => {
     const contenedor = contenedorRef.current;
     if (!contenedor || !modelo) return undefined;
-    const capaPorMaterial = Object.fromEntries(
-      Object.entries(modelo.materiales).flatMap(([capa, materiales]) => materiales.map((m) => [m, capa])),
-    );
     anclasRef.current = [];
     estadoRef.current.actual = 0;
     setCargando(true);
@@ -68,7 +66,7 @@ export default function VistaExplosionada({ modelo, capasData = [], seleccionada
     escena.add(piso);
 
     // Una capa = un grupo; mover el grupo en Y es todo el despiece.
-    const grupos = Object.fromEntries(CAPAS.map((capa) => [capa.id, new THREE.Group()]));
+    let grupos = Object.fromEntries(CAPAS.map((capa) => [capa.id, new THREE.Group()]));
     const materialesPorCapa = Object.fromEntries(CAPAS.map((capa) => [capa.id, new Set()]));
     let altoBase = 1.6;
     let cancelado = false;
@@ -77,37 +75,39 @@ export default function VistaExplosionada({ modelo, capasData = [], seleccionada
       modelo.url,
       (gltf) => {
         if (cancelado) return;
-        const modelo = gltf.scene;
-        modelo.updateMatrixWorld(true);
         // El eje largo del vehiculo se lleva a X para que el despiece se vea de lado.
-        const crudo = new THREE.Box3().setFromObject(modelo).getSize(new THREE.Vector3());
-        if (crudo.z > crudo.x) modelo.rotation.y = Math.PI / 2;
-        modelo.updateMatrixWorld(true);
-        const tam = new THREE.Box3().setFromObject(modelo).getSize(new THREE.Vector3());
-        modelo.scale.multiplyScalar(LARGO / (Math.max(tam.x, tam.z) || 1));
-        modelo.updateMatrixWorld(true);
-        const caja = new THREE.Box3().setFromObject(modelo);
-        const centro = caja.getCenter(new THREE.Vector3());
-        modelo.position.x -= centro.x;
-        modelo.position.z -= centro.z;
-        modelo.position.y -= caja.min.y;
-        modelo.updateMatrixWorld(true);
+        const raiz = gltf.scene;
+        const caja = normalizarModelo(raiz, { largo: LARGO, rotacionY: modelo.rotacionY });
         altoBase = caja.getSize(new THREE.Vector3()).y;
 
         // Se pasan las mallas a su grupo conservando la posicion en el mundo.
         const mallas = [];
-        modelo.traverse((obj) => { if (obj.isMesh) mallas.push(obj); });
-        mallas.forEach((malla) => {
-          const material = Array.isArray(malla.material) ? malla.material[0] : malla.material;
-          const capa = capaPorMaterial[material?.name] || 'exterior';
-          grupos[capa].attach(malla);
-          (Array.isArray(malla.material) ? malla.material : [malla.material]).forEach((m) => {
-            m.userData.opacidadOriginal = m.opacity;
-            m.userData.transparenteOriginal = m.transparent;
-            materialesPorCapa[capa].add(m);
+        raiz.traverse((obj) => { if (obj.isMesh) mallas.push(obj); });
+        grupos = agruparPorCapas(mallas, caja, { capas: CAPAS.map((capa) => capa.id), capaFija: capaFijaDe(modelo) });
+        Object.entries(grupos).forEach(([capa, grupo]) => {
+          escena.add(grupo);
+          grupo.traverse((obj) => {
+            if (!obj.isMesh) return;
+            // Copia propia del material: un material compartido entre capas no
+            // debe apagarse junto con la otra capa.
+            obj.material = Array.isArray(obj.material) ? obj.material.map((m) => m.clone()) : obj.material.clone();
+            (Array.isArray(obj.material) ? obj.material : [obj.material]).forEach((m) => {
+              m.userData.opacidadOriginal = m.opacity;
+              m.userData.transparenteOriginal = m.transparent;
+              materialesPorCapa[capa].add(m);
+            });
           });
         });
-        Object.values(grupos).forEach((grupo) => escena.add(grupo));
+
+        pintarCapas(grupos, modelo.colores);
+
+        // Solo se apilan las capas que el modelo trae, para no dejar huecos.
+        const conPiezas = CAPAS.filter((capa) => grupos[capa.id].children.length);
+        total = Math.max(conPiezas.length - 1, 0);
+        niveles = Object.fromEntries(conPiezas.map((capa, i) => [capa.id, total - i]));
+        // La camara se aleja segun lo alto que queda el despiece (vans, 7 capas).
+        const distancia = Math.max(10, (altoBase + total * SEPARACION) * 2.3);
+        camara.position.copy(new THREE.Vector3(6.2, 2.6, 7.4).normalize().multiplyScalar(distancia));
 
         anclasRef.current = CAPAS.map((capa) => {
           const cajaCapa = new THREE.Box3().setFromObject(grupos[capa.id]);
@@ -123,7 +123,8 @@ export default function VistaExplosionada({ modelo, capasData = [], seleccionada
       () => { if (!cancelado) { setCargando(false); setError(true); } },
     );
 
-    const total = CAPAS.length - 1;
+    let total = 0;
+    let niveles = {};
     const proyeccion = new THREE.Vector3();
     const puntoMovido = new THREE.Vector3();
     let frame = 0;
@@ -133,7 +134,7 @@ export default function VistaExplosionada({ modelo, capasData = [], seleccionada
       estado.actual += (estado.objetivo - estado.actual) * 0.07;
       const t = estado.actual;
 
-      CAPAS.forEach((capa, i) => { grupos[capa.id].position.y = (total - i) * SEPARACION * t; });
+      CAPAS.forEach((capa) => { grupos[capa.id].position.y = (niveles[capa.id] || 0) * SEPARACION * t; });
 
       // Encuadre: al despiezar el conjunto crece hacia arriba y la camara se aleja.
       const altoTotal = altoBase + total * SEPARACION * t;
@@ -245,6 +246,7 @@ export default function VistaExplosionada({ modelo, capasData = [], seleccionada
         )}
       </div>
       <p className="absolute bottom-2 left-3 text-[10px] text-slate-400">Arrastra para girar · rueda para acercar · clic en una capa para resaltarla</p>
+      {modelo?.autor && <p className="absolute bottom-2 right-3 text-[10px] text-slate-400">Modelo 3D: {modelo.autor} (Sketchfab, CC-BY)</p>}
     </div>
   );
 }

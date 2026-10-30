@@ -3,6 +3,9 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { estadoMuestra, vidaText, zonaColor } from './kpiLabels';
+import { agruparPorCapas, CAPAS_GEOMETRICAS, normalizarModelo, pintarCapas } from '../../components/despiece/despieceGeometrico';
+import SelectorVehiculo from '../../components/despiece/SelectorVehiculo';
+import { capaFijaDe, vehiculoPorDefecto, vehiculoPorId } from '../../config/vehiculosDespiece';
 
 // Vehiculo de referencia con cada repuesto medido señalado sobre el modelo.
 //
@@ -10,30 +13,14 @@ import { estadoMuestra, vidaText, zonaColor } from './kpiLabels';
 // se proyecta la posicion 3D de cada anclaje a coordenadas de pantalla en cada
 // frame. Asi el texto queda nitido a cualquier zoom y el clic es real, cosa que
 // no se consigue con sprites ni con texto dentro de la escena.
-
-// Un modelo por sede: cada taller atiende un parque distinto y el dibujo debe
-// parecerse a lo que ahi se ve entrar.
 //
-// rotacionY alinea el eje largo del modelo con X, que es como estan definidos
-// los anclajes. El Kia ya viene con el largo en X (rotacion 0); el L200 lo trae
-// en Z, asi que hay que girarlo un cuarto de vuelta. Si un modelo apareciera
-// mirando al lado contrario, se le suma Math.PI.
-const MODELOS = Object.freeze({
-  'Pineda Trujillo': {
-    url: '/assets/1978-2006_mitsubishi_l200_red_offroader_v4.glb',
-    rotacionY: -Math.PI / 2,
-  },
-  'Pineda Callao': {
-    url: '/assets/modelo_camioneta.glb',
-    rotacionY: 0,
-  },
-});
+// Vista explosionada: el vehiculo se parte en capas (carroceria, vidrios,
+// habitaculo, motor y bajos, ruedas) que se separan en vertical. Cada repuesto
+// viaja con la capa donde esta montado, asi las etiquetas tambien se reparten.
 
-const MODELO_POR_DEFECTO = MODELOS['Pineda Callao'];
-
-function modeloDe(local) {
-  return MODELOS[local] || MODELO_POR_DEFECTO;
-}
+// Un modelo por sede (el que mas entra a ese taller), cambiable desde el visor.
+// El catalogo y la rotacion de cada modelo estan en config/vehiculosDespiece.js:
+// los anclajes asumen el largo en X con el frente hacia -X.
 
 // Largo al que se normaliza el modelo. Los anclajes estan en fracciones de ese
 // volumen, asi que cambiar este numero no los descoloca.
@@ -62,12 +49,36 @@ const ANCLAJES = Object.freeze({
   'zapatas-freno': [0.30, -0.42, 0.32],
 });
 
+// Capa (ver despieceGeometrico.js) con la que se mueve cada repuesto al despiezar.
+const CAPA_DE_PIEZA = Object.freeze({
+  'filtro-aire': 'chasis',
+  'filtro-aceite': 'chasis',
+  bujias: 'chasis',
+  'faja-accesorios': 'chasis',
+  bateria: 'chasis',
+  'filtro-combustible': 'chasis',
+  amortiguador: 'ruedas',
+  'pastillas-freno': 'ruedas',
+  'zapatas-freno': 'ruedas',
+  'filtro-cabina': 'interior',
+  plumillas: 'vidrios',
+});
+
+// Distancia vertical entre capas con el vehiculo despiezado.
+const SEPARACION = 0.55;
+
 export default function VehiculoDespiece({
   resumen, muestraMinima, seleccionado, onSeleccionar, local,
 }) {
-  const { url, rotacionY } = modeloDe(local);
+  // Si se elige otro vehiculo, vale hasta cambiar de sede.
+  const [vehiculoElegido, setVehiculoElegido] = useState(null);
+  useEffect(() => { setVehiculoElegido(null); }, [local]);
+  const vehiculo = vehiculoElegido ? vehiculoPorId(vehiculoElegido) : vehiculoPorDefecto('kpi', local);
+  const { url, rotacionY } = vehiculo;
   const contenedorRef = useRef(null);
   const marcadoresRef = useRef([]);
+  const estadoRef = useRef({ objetivo: 0, actual: 0, seleccionado: null });
+  const [despiezado, setDespiezado] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(false);
   // Posicion en pantalla de cada etiqueta, recalculada en cada frame.
@@ -77,6 +88,9 @@ export default function VehiculoDespiece({
     () => (resumen || []).filter((fila) => ANCLAJES[fila.id]),
     [resumen],
   );
+
+  useEffect(() => { estadoRef.current.objetivo = despiezado ? 1 : 0; }, [despiezado]);
+  useEffect(() => { estadoRef.current.seleccionado = seleccionado || null; }, [seleccionado]);
 
   useEffect(() => {
     const contenedor = contenedorRef.current;
@@ -91,7 +105,7 @@ export default function VehiculoDespiece({
       0.1,
       100,
     );
-    camara.position.set(4.4, 1.9, 4.6);
+    camara.position.set(6.4, 3.0, 6.8);
 
     const render3d = new THREE.WebGLRenderer({ antialias: true });
     render3d.setSize(contenedor.clientWidth, contenedor.clientHeight);
@@ -103,7 +117,7 @@ export default function VehiculoDespiece({
     controles.enableDamping = true;
     controles.enablePan = false;
     controles.minDistance = 3.4;
-    controles.maxDistance = 9;
+    controles.maxDistance = 14;
     // No se baja de la horizontal: por debajo del piso no hay nada que ver.
     controles.maxPolarAngle = Math.PI / 2.05;
     controles.target.set(0, 0.7, 0);
@@ -124,44 +138,60 @@ export default function VehiculoDespiece({
     escena.add(piso);
 
     let cancelado = false;
+    let grupos = null;
+    // Nivel de apilado de cada capa; solo cuentan las que tienen piezas (el L200
+    // no trae habitaculo ni motor y no debe quedar un hueco en el despiece).
+    let niveles = {};
+    let totalNiveles = 0;
+    const materialesPorCapa = Object.fromEntries(CAPAS_GEOMETRICAS.map((capa) => [capa.id, new Set()]));
+    let altoBase = 1.5;
     marcadoresRef.current = [];
+    estadoRef.current.actual = 0;
     setCargando(true);
     setError(false);
+    setDespiezado(false);
     new GLTFLoader().load(
       url,
       (gltf) => {
         if (cancelado) return;
         const modelo = gltf.scene;
-
-        // La rotacion va antes de medir: Box3 usa la matriz actual, asi que
-        // girar despues dejaria el encuadre y los anclajes calculados sobre el
-        // volumen sin rotar.
-        modelo.rotation.y = rotacionY;
-        modelo.updateMatrixWorld(true);
-
-        // Primero escalar y recien despues centrar: position no se reescala con
-        // el modelo, asi que centrar antes deja el offset sin ajustar.
-        const caja = new THREE.Box3().setFromObject(modelo);
-        const tamanio = caja.getSize(new THREE.Vector3());
-        const escala = LARGO / (Math.max(tamanio.x, tamanio.y, tamanio.z) || 1);
-        modelo.scale.setScalar(escala);
-        modelo.updateMatrixWorld(true);
-
-        const cajaEscalada = new THREE.Box3().setFromObject(modelo);
-        modelo.position.sub(cajaEscalada.getCenter(new THREE.Vector3()));
+        const cajaFinal = normalizarModelo(modelo, { largo: LARGO, rotacionY });
         escena.add(modelo);
-
-        // Apoyarlo en el piso en vez de dejarlo flotando.
-        modelo.updateMatrixWorld(true);
-        const apoyado = new THREE.Box3().setFromObject(modelo);
-        modelo.position.y -= apoyado.min.y;
-
-        modelo.updateMatrixWorld(true);
-        const cajaFinal = new THREE.Box3().setFromObject(modelo);
         const dim = cajaFinal.getSize(new THREE.Vector3());
         const centro = cajaFinal.getCenter(new THREE.Vector3());
+        altoBase = dim.y;
+
+        // Las mallas pasan a un grupo por capa; mover el grupo en Y es el despiece.
+        const mallas = [];
+        modelo.traverse((obj) => { if (obj.isMesh) mallas.push(obj); });
+        grupos = agruparPorCapas(mallas, cajaFinal, { capaFija: capaFijaDe(vehiculo) });
+        Object.entries(grupos).forEach(([capa, grupo]) => {
+          escena.add(grupo);
+          grupo.traverse((obj) => {
+            if (!obj.isMesh) return;
+            // Copia propia del material: al apagar una capa no se apaga otra que lo comparta.
+            obj.material = Array.isArray(obj.material) ? obj.material.map((m) => m.clone()) : obj.material.clone();
+            (Array.isArray(obj.material) ? obj.material : [obj.material]).forEach((m) => {
+              m.userData.opacidadOriginal = m.opacity;
+              m.userData.transparenteOriginal = m.transparent;
+              materialesPorCapa[capa].add(m);
+            });
+          });
+        });
+        pintarCapas(grupos, vehiculo.colores);
+        escena.remove(modelo);
+        const conPiezas = CAPAS_GEOMETRICAS.filter((capa) => grupos[capa.id].children.length);
+        totalNiveles = Math.max(conPiezas.length - 1, 0);
+        niveles = Object.fromEntries(conPiezas.map((capa, i) => [capa.id, totalNiveles - i]));
+        // La camara se aleja segun lo alto que queda el despiece.
+        const distancia = Math.max(10, (altoBase + totalNiveles * SEPARACION) * 2.4);
+        camara.position.copy(new THREE.Vector3(6.4, 3.0, 6.8).normalize().multiplyScalar(distancia));
+        // Un repuesto cuya capa no existe en el modelo viaja con la carroceria.
+        const capaDeAnclaje = (id) => (niveles[CAPA_DE_PIEZA[id]] !== undefined ? CAPA_DE_PIEZA[id] : 'carroceria');
+
         marcadoresRef.current = Object.entries(ANCLAJES).map(([id, [fx, fy, fz]]) => ({
           id,
+          capa: capaDeAnclaje(id),
           punto: new THREE.Vector3(
             centro.x + fx * dim.x,
             centro.y + fy * dim.y,
@@ -171,6 +201,8 @@ export default function VehiculoDespiece({
 
         controles.target.copy(centro);
         setCargando(false);
+        // Arranca armado y se despieza solo, para que se entienda la idea.
+        setTimeout(() => { if (!cancelado) setDespiezado(true); }, 700);
       },
       undefined,
       () => {
@@ -182,8 +214,32 @@ export default function VehiculoDespiece({
     );
 
     const proyeccion = new THREE.Vector3();
+    let ultimaCapaActiva;
     let frame = 0;
     const animar = () => {
+      const estado = estadoRef.current;
+      estado.actual += (estado.objetivo - estado.actual) * 0.07;
+      if (grupos) {
+        CAPAS_GEOMETRICAS.forEach((capa) => { grupos[capa.id].position.y = (niveles[capa.id] || 0) * SEPARACION * estado.actual; });
+        // Al despiezar el conjunto crece hacia arriba: el encuadre lo acompaña.
+        const objetivoY = (altoBase + totalNiveles * SEPARACION * estado.actual) / 2;
+        controles.target.y += (objetivoY - controles.target.y) * 0.1;
+
+        // Con un repuesto elegido, las demas capas quedan translucidas.
+        const capaActiva = estado.seleccionado ? CAPA_DE_PIEZA[estado.seleccionado] || null : null;
+        if (capaActiva !== ultimaCapaActiva) {
+          ultimaCapaActiva = capaActiva;
+          CAPAS_GEOMETRICAS.forEach((capa) => {
+            const apagada = capaActiva && capaActiva !== capa.id;
+            materialesPorCapa[capa.id].forEach((m) => {
+              m.transparent = apagada ? true : m.userData.transparenteOriginal;
+              m.opacity = apagada ? 0.15 : m.userData.opacidadOriginal;
+              m.depthWrite = !apagada;
+              m.needsUpdate = true;
+            });
+          });
+        }
+      }
       controles.update();
       render3d.render(escena, camara);
 
@@ -192,8 +248,10 @@ export default function VehiculoDespiece({
         const ancho = contenedor.clientWidth;
         const alto = contenedor.clientHeight;
         const siguiente = {};
-        marcadoresRef.current.forEach(({ id, punto }) => {
-          proyeccion.copy(punto).project(camara);
+        marcadoresRef.current.forEach(({ id, capa, punto }) => {
+          proyeccion.copy(punto);
+          if (grupos) proyeccion.y += grupos[capa].position.y;
+          proyeccion.project(camara);
           siguiente[id] = {
             x: (proyeccion.x * 0.5 + 0.5) * ancho,
             y: (-proyeccion.y * 0.5 + 0.5) * alto,
@@ -224,10 +282,12 @@ export default function VehiculoDespiece({
         contenedor.removeChild(render3d.domElement);
       }
     };
+    // La escena se arma por vehiculo (url); despiece y seleccion van por ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, rotacionY]);
 
   return (
-    <div className="relative h-[520px] w-full overflow-hidden rounded-lg bg-slate-50">
+    <div className="relative h-[600px] w-full overflow-hidden rounded-lg bg-slate-50">
       <div ref={contenedorRef} className="absolute inset-0" />
 
       {cargando ? (
@@ -286,8 +346,23 @@ export default function VehiculoDespiece({
         );
       })}
 
+      <SelectorVehiculo value={vehiculo.id} onChange={setVehiculoElegido} className="absolute left-3 top-3 rounded-md bg-white/90 px-2 py-1 shadow-sm" />
+
+      {!cargando && !error ? (
+        <button
+          type="button"
+          onClick={() => setDespiezado((valor) => !valor)}
+          className="absolute right-3 top-3 rounded-md bg-red-700 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-red-800"
+        >
+          {despiezado ? 'Armar' : 'Despiezar'}
+        </button>
+      ) : null}
+
       <p className="absolute bottom-2 left-3 text-[10px] text-slate-400">
-        Arrastra para girar · rueda para acercar
+        Arrastra para girar · rueda para acercar · clic en un repuesto para resaltar su capa
+      </p>
+      <p className="absolute bottom-2 right-3 text-[10px] text-slate-400">
+        Modelo 3D: {vehiculo.autor} (Sketchfab, CC-BY)
       </p>
     </div>
   );

@@ -2,6 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { CAPAS } from './capas';
+import { capaFijaDe } from '../../config/vehiculosDespiece';
+import { agruparPorCapas, normalizarModelo, pintarCapas } from '../../components/despiece/despieceGeometrico';
 
 // El mismo .glb ya lo bajo la vista explosionada: con la cache de three no se
 // vuelve a descargar al abrir el modal.
@@ -16,11 +19,6 @@ export default function VistaPieza({ modelo, capaId, color }) {
   useEffect(() => {
     const contenedor = contenedorRef.current;
     if (!contenedor || !modelo) return undefined;
-    const materiales = new Set(modelo.materiales[capaId] || []);
-    // Los materiales no listados caen en "exterior" (igual que en el despiece).
-    const listados = new Set(Object.values(modelo.materiales).flat());
-    const esDeLaCapa = (nombre) => materiales.has(nombre) || (capaId === 'exterior' && !listados.has(nombre));
-
     const escena = new THREE.Scene();
     escena.background = new THREE.Color('#f8fafc');
     const camara = new THREE.PerspectiveCamera(35, contenedor.clientWidth / contenedor.clientHeight, 0.01, 100);
@@ -50,21 +48,23 @@ export default function VistaPieza({ modelo, capaId, color }) {
       modelo.url,
       (gltf) => {
         if (cancelado) return;
+        // Mismo reparto de capas que la vista explosionada.
         const raiz = gltf.scene;
-        raiz.updateMatrixWorld(true);
-        const pieza = new THREE.Group();
+        const cajaVehiculo = normalizarModelo(raiz, { largo: 4.2, rotacionY: modelo.rotacionY });
         const mallas = [];
         raiz.traverse((obj) => { if (obj.isMesh) mallas.push(obj); });
-        mallas.forEach((malla) => {
+        const grupos = agruparPorCapas(mallas, cajaVehiculo, { capas: CAPAS.map((capa) => capa.id), capaFija: capaFijaDe(modelo) });
+        pintarCapas(grupos, modelo.colores);
+        const pieza = grupos[capaId] || new THREE.Group();
+        pieza.traverse((malla) => {
+          if (!malla.isMesh) return;
           const material = Array.isArray(malla.material) ? malla.material[0] : malla.material;
-          if (!esDeLaCapa(material?.name)) return;
           // Vidrios casi transparentes no se verian solos: se les da cuerpo.
-          if (material.transparent && material.opacity < 0.5) {
+          if (material?.transparent && material.opacity < 0.5) {
             malla.material = material.clone();
             malla.material.opacity = 0.55;
             malla.material.color = new THREE.Color(color || '#0284c7');
           }
-          pieza.attach(malla);
         });
         if (!pieza.children.length) {
           setEstado('vacio');

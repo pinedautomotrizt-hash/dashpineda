@@ -269,6 +269,48 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo, di
       )
       : proyeccionBaseMes(mes)
   );
+  // Proyeccion que se habria hecho al empezar cada mes ya cerrado, con el
+  // mismo metodo: promedio de OT de los 3 meses cerrados anteriores × ticket
+  // acumulado del año hasta el mes previo (en enero, el ticket del año
+  // anterior). Sirve para medir que tan bien acierta la proyeccion.
+  const proyeccionRetroMes = (mes) => {
+    if (!esAnioActual || mes >= mesActual) return null;
+    const recogidos = [];
+    let mesCursor = mes - 1;
+    let anioCursor = anio;
+    while (recogidos.length < MESES_VENTANA_PROMEDIO) {
+      if (mesCursor < 1) {
+        mesCursor = 12;
+        anioCursor -= 1;
+      }
+      const delMes = unidades(anioCursor, mesCursor);
+      if (!delMes) break;
+      recogidos.push(delMes);
+      mesCursor -= 1;
+    }
+    if (!recogidos.length) return null;
+    const promedio = Math.round(recogidos.reduce((suma, valorMes) => suma + valorMes, 0) / recogidos.length);
+
+    const anioTicket = mes === 1 ? anio - 1 : anio;
+    const hastaMes = mes === 1 ? 12 : mes - 1;
+    let ventas = 0;
+    let unidadesTicket = 0;
+    for (let m = 1; m <= hastaMes; m += 1) {
+      ventas += valor(anioTicket, m);
+      unidadesTicket += unidades(anioTicket, m);
+    }
+    if (!unidadesTicket) return null;
+    return promedio * (ventas / unidadesTicket);
+  };
+  const alcanceVsRetro = (mes) => {
+    const proyectado = proyeccionRetroMes(mes);
+    return proyectado ? (valor(anio, mes) / proyectado) * 100 : null;
+  };
+  const mesesConRetro = meses.filter((mes) => proyeccionRetroMes(mes));
+  const proyeccionRetroAnual = mesesConRetro.reduce((suma, mes) => suma + proyeccionRetroMes(mes), 0);
+  const alcanceRetroAnual = mesesConRetro.reduce((suma, mes) => suma + valor(anio, mes), 0);
+  const porcentajeRetroAnual = proyeccionRetroAnual ? (alcanceRetroAnual / proyeccionRetroAnual) * 100 : null;
+
   const proyeccionBaseAnual = meses.reduce((suma, mes) => suma + proyeccionBaseMes(mes), 0);
   const proyeccionConIncrementoAnual = meses.reduce((suma, mes) => suma + proyeccionConIncrementoMes(mes), 0);
 
@@ -401,6 +443,33 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo, di
                 ))}
                 <td className="px-3 py-1.5 text-right font-bold text-indigo-950">{money(proyeccionConIncrementoAnual)}</td>
               </tr>
+
+              <tr className="border-t border-slate-200">
+                <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-medium text-slate-600">Proyección meses pasados</td>
+                {meses.map((mes) => {
+                  const proyectado = proyeccionRetroMes(mes);
+                  return (
+                    <td key={mes} className="px-2 py-1.5 text-right text-slate-900">
+                      {proyectado === null ? DASH : money(proyectado)}
+                    </td>
+                  );
+                })}
+                <td className="px-3 py-1.5 text-right font-semibold text-slate-900">{proyeccionRetroAnual ? money(proyeccionRetroAnual) : DASH}</td>
+              </tr>
+              <tr className="border-t border-slate-100">
+                <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-medium text-slate-600">% Alcance vs. proyección</td>
+                {meses.map((mes) => {
+                  const porcentaje = alcanceVsRetro(mes);
+                  return (
+                    <td key={mes} className={`px-2 py-1.5 text-right ${toneAlcance(porcentaje)}`}>
+                      {porcentaje === null ? DASH : pct(porcentaje)}
+                    </td>
+                  );
+                })}
+                <td className={`px-3 py-1.5 text-right ${toneAlcance(porcentajeRetroAnual)}`}>
+                  {porcentajeRetroAnual === null ? DASH : pct(porcentajeRetroAnual)}
+                </td>
+              </tr>
             </>
           )}
           
@@ -415,6 +484,10 @@ function TablaAnio({ anio, anioAnterior, metaAnio, valor, unidades, esFuturo, di
           Suma el alcance real de los meses cerrados y, para el mes actual y los futuros, usa
           OT × ticket promedio acumulado. A esos meses proyectados se les aplica
           un incremento acumulativo de 5% mensual desde octubre.
+          <br />
+          <span className="font-semibold">Proyección meses pasados:</span>{' '}
+          lo que se habría proyectado al empezar cada mes ya cerrado (promedio de OT de los 3 meses
+          anteriores × ticket acumulado hasta el mes previo). El % compara lo facturado contra esa proyección.
         </div>
       )}
     </div>
